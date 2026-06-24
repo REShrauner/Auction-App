@@ -20,7 +20,7 @@ document.querySelectorAll('.login-tab').forEach(tab => {
 
 function usernameToEmail(username) {
   // Supabase auth requires an email; we map username → username@quiltauction.local
-  return username.trim().toLowerCase() + '@quiltauction.com';
+  return username.trim().toLowerCase() + '@quiltauction.local';
 }
 
 $('btn-login').addEventListener('click', async () => {
@@ -191,39 +191,22 @@ async function approveRequest({ reqId, name, username, password }) {
   const btn = document.querySelector(`[data-action="approve"][data-req-id="${reqId}"]`);
   if (btn) { btn.disabled = true; btn.textContent = 'Approving…'; }
 
-  // Create the Supabase auth user via admin — we call a Supabase Edge Function
-  // that has service-role access. For now, use the workaround of signing up
-  // the user with their chosen credentials, then immediately approving.
-  // NOTE: This requires the "Disable email confirmations" setting in Supabase Auth.
-  const { data: signUpData, error: signUpError } = await sb.auth.signUp({
-    email:    usernameToEmail(username),
-    password: password,
-    options: {
-      data: {
-        username:    username,
-        full_name:   name,
-        is_admin:    false,
-        is_approved: true,
-      }
-    }
+  // Call Edge Function with service-role access (bypasses email system entirely)
+  const resp = await fetch('https://uoqscftixhpdznjjghpa.supabase.co/functions/v1/create-user', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer sb_publishable_TWubklssPT1o8Cf6JeE65w_Zzx8IUt5',
+    },
+    body: JSON.stringify({ username, password, full_name: name, roles }),
   });
 
-  if (signUpError) {
-    alert('Error creating account: ' + signUpError.message);
+  const result = await resp.json();
+
+  if (!resp.ok || result.error) {
+    alert('Error creating account: ' + (result.error || 'Unknown error'));
     if (btn) { btn.disabled = false; btn.textContent = 'Approve'; }
     return;
-  }
-
-  // Mark profile approved (trigger may have created it; update to be sure)
-  if (signUpData?.user) {
-    await sb.from('profiles').upsert({
-      id:          signUpData.user.id,
-      username:    username,
-      full_name:   name,
-      is_admin:    false,
-      is_approved: true,
-      roles:       roles,
-    });
   }
 
   // Delete the request
