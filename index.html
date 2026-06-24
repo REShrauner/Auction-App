@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark" data-theme="teal">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Quilt Auction App — bid documentation, checkout, and reports">
+  <title>Quilt Auction</title>
+
+  <!-- Pre-paint theme: apply saved mode/theme before first render to avoid flash -->
+  <script>
+    (function() {
+      var mode  = localStorage.getItem('qa_mode')  || 'dark';
+      var theme = localStorage.getItem('qa_theme') || 'teal';
+      document.documentElement.setAttribute('data-mode',  mode);
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- QR code generation -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <!-- jsPDF for PDF reports -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- ── Navigation ─────────────────────────────────────────── -->
+  <nav id="app-nav" class="hidden">
+    <span class="nav-title">Quilt Auction</span>
+    <button class="nav-btn" data-screen="quilts">Quilts</button>
+    <button class="nav-btn" data-screen="bidders">Bidders</button>
+    <button class="nav-btn" data-screen="bids">Bids</button>
+    <button class="nav-btn" data-screen="checkout">Checkout</button>
+    <button class="nav-btn admin-only hidden" data-screen="reports">Reports</button>
+    <button class="nav-btn admin-only hidden" data-screen="admin">Admin</button>
+    <span id="nav-user-info"></span>
+    <button id="nav-logout">Sign out</button>
+  </nav>
+
+  <!-- ── App content ────────────────────────────────────────── -->
+  <main id="app-main">
+
+    <!-- ── Login / Account Request ──────────────────────────── -->
+    <div id="screen-login" class="screen active">
+      <div class="login-box">
+        <div class="login-logo">
+          <h1>Quilt Auction</h1>
+          <p>Volunteer management system</p>
+        </div>
+
+        <div class="login-tabs">
+          <button class="login-tab active" data-tab="login">Sign in</button>
+          <button class="login-tab" data-tab="request">Request access</button>
+        </div>
+
+        <!-- Sign-in form -->
+        <div id="login-form-panel">
+          <div class="form-group mb-16">
+            <label for="login-username">Username</label>
+            <input type="text" id="login-username" autocomplete="username" autocapitalize="none">
+          </div>
+          <div class="form-group mb-16">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" autocomplete="current-password">
+          </div>
+          <div id="login-error" class="form-error hidden"></div>
+          <button id="btn-login" class="btn btn-primary" style="width:100%">Sign in</button>
+        </div>
+
+        <!-- Account request form -->
+        <div id="request-form-panel" class="hidden">
+          <div class="alert alert-accent mb-16">
+            Your request will be reviewed by an admin. You'll be notified when approved.
+          </div>
+          <div class="form-group mb-16">
+            <label for="req-name">Full name</label>
+            <input type="text" id="req-name" autocomplete="name">
+          </div>
+          <div class="form-group mb-16">
+            <label for="req-username">Desired username</label>
+            <input type="text" id="req-username" autocapitalize="none">
+          </div>
+          <div class="form-group mb-16">
+            <label for="req-password">Password</label>
+            <input type="password" id="req-password" autocomplete="new-password">
+            <span class="form-hint">Min 8 chars, 1 uppercase, 1 number</span>
+          </div>
+          <div id="request-error" class="form-error hidden"></div>
+          <div id="request-success" class="form-success hidden"></div>
+          <button id="btn-request" class="btn btn-primary" style="width:100%">Submit request</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Quilts ────────────────────────────────────────────── -->
+    <div id="screen-quilts" class="screen">
+      <h2 class="page-heading">Quilts</h2>
+
+      <!-- Entry form -->
+      <div class="form-card" id="quilt-form-wrap">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="qf-name">Quilt name *</label>
+            <input type="text" id="qf-name">
+          </div>
+          <div class="form-group">
+            <label for="qf-piecer">Piecer's name *</label>
+            <input type="text" id="qf-piecer">
+          </div>
+          <div class="form-group">
+            <label for="qf-quilter">Quilter's name *</label>
+            <input type="text" id="qf-quilter">
+          </div>
+          <div class="form-group">
+            <label for="qf-width">Width (inches) *</label>
+            <input type="number" id="qf-width" min="1" step="0.5">
+          </div>
+          <div class="form-group">
+            <label for="qf-height">Height (inches) *</label>
+            <input type="number" id="qf-height" min="1" step="0.5">
+          </div>
+          <div class="form-group full-width">
+            <label for="qf-pitch">Sales pitch</label>
+            <textarea id="qf-pitch" placeholder="Optional description for the auctioneer…"></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Photo (optional)</label>
+            <div class="photo-drop" id="quilt-photo-drop">
+              <input type="file" id="qf-photo" accept="image/*">
+              <div id="quilt-photo-prompt">
+                <div class="text-muted">Tap to add a photo</div>
+                <div class="text-faint mt-4" style="font-size:var(--fs-xs)">or drag and drop</div>
+              </div>
+              <img id="quilt-photo-preview" class="hidden" alt="Quilt photo preview">
+            </div>
+          </div>
+        </div>
+        <div id="quilt-form-error" class="form-error hidden"></div>
+        <div class="form-actions">
+          <button id="btn-save-quilt" class="btn btn-primary">Save quilt</button>
+          <button id="btn-cancel-quilt-edit" class="btn btn-secondary hidden">Cancel edit</button>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div id="quilt-list"></div>
+    </div>
+
+    <!-- ── Bidders ───────────────────────────────────────────── -->
+    <div id="screen-bidders" class="screen">
+      <h2 class="page-heading">Bidders</h2>
+
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="bf-name">Name *</label>
+            <input type="text" id="bf-name">
+          </div>
+          <div class="form-group full-width">
+            <label for="bf-address">Address</label>
+            <input type="text" id="bf-address">
+          </div>
+          <div class="form-group">
+            <label for="bf-phone">Phone</label>
+            <input type="text" id="bf-phone">
+          </div>
+          <div class="form-group">
+            <label for="bf-email">Email</label>
+            <input type="text" id="bf-email" autocapitalize="none">
+          </div>
+        </div>
+        <div id="bidder-form-error" class="form-error hidden"></div>
+        <div class="form-actions">
+          <button id="btn-save-bidder" class="btn btn-primary">Save bidder</button>
+          <button id="btn-cancel-bidder-edit" class="btn btn-secondary hidden">Cancel edit</button>
+        </div>
+      </div>
+
+      <div id="bidder-list"></div>
+    </div>
+
+    <!-- ── Bid Documentation ─────────────────────────────────── -->
+    <div id="screen-bids" class="screen">
+      <h2 class="page-heading">Bid Documentation</h2>
+
+      <div class="card mb-16">
+        <div class="form-group">
+          <label for="bid-quilt-select">Select quilt</label>
+          <select id="bid-quilt-select">
+            <option value="">— choose a quilt —</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="bid-status-banner"></div>
+
+      <div id="bid-panels-wrap" class="hidden">
+        <div class="bid-panels">
+          <!-- Panel A -->
+          <div class="bid-panel" id="bid-panel-a">
+            <div class="bid-panel-label">Entry — Person A</div>
+            <div id="bid-a-submitted-view" class="hidden">
+              <div class="text-muted mb-8">Submitted</div>
+              <div id="bid-a-summary"></div>
+            </div>
+            <div id="bid-a-entry-form">
+              <div class="form-group mb-16">
+                <label for="bid-a-amount">Winning bid amount ($) *</label>
+                <input type="number" id="bid-a-amount" min="0" step="0.01">
+              </div>
+              <div class="form-group mb-16">
+                <label for="bid-a-bidder">Winning bidder number *</label>
+                <input type="number" id="bid-a-bidder" min="1" step="1">
+              </div>
+              <div id="bid-a-error" class="form-error hidden"></div>
+              <button id="btn-submit-a" class="btn btn-primary">Submit Entry A</button>
+            </div>
+          </div>
+
+          <!-- Panel B -->
+          <div class="bid-panel" id="bid-panel-b">
+            <div class="bid-panel-label">Entry — Person B</div>
+            <div id="bid-b-submitted-view" class="hidden">
+              <div class="text-muted mb-8">Submitted</div>
+              <div id="bid-b-summary"></div>
+            </div>
+            <div id="bid-b-entry-form">
+              <div class="form-group mb-16">
+                <label for="bid-b-amount">Winning bid amount ($) *</label>
+                <input type="number" id="bid-b-amount" min="0" step="0.01">
+              </div>
+              <div class="form-group mb-16">
+                <label for="bid-b-bidder">Winning bidder number *</label>
+                <input type="number" id="bid-b-bidder" min="1" step="1">
+              </div>
+              <div id="bid-b-error" class="form-error hidden"></div>
+              <button id="btn-submit-b" class="btn btn-primary">Submit Entry B</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mismatch resolution -->
+        <div id="mismatch-panel" class="hidden mt-16">
+          <div class="alert alert-needs">
+            <strong>Mismatch detected.</strong> Entries A and B do not agree. Both persons must discuss and re-submit agreed values below.
+          </div>
+          <div class="card">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="res-amount">Agreed winning bid ($) *</label>
+                <input type="number" id="res-amount" min="0" step="0.01">
+              </div>
+              <div class="form-group">
+                <label for="res-bidder">Agreed bidder number *</label>
+                <input type="number" id="res-bidder" min="1" step="1">
+              </div>
+            </div>
+            <div id="resolution-error" class="form-error hidden"></div>
+            <div class="form-actions">
+              <button id="btn-resolve-a" class="btn btn-accent">Confirm (Person A)</button>
+              <button id="btn-resolve-b" class="btn btn-accent">Confirm (Person B)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent bids -->
+      <hr class="hr">
+      <h3 class="page-heading" style="font-size:var(--fs-xl)">Recorded bids <small>most recent first</small></h3>
+      <div id="bid-recent-list"></div>
+    </div>
+
+    <!-- ── Checkout ──────────────────────────────────────────── -->
+    <div id="screen-checkout" class="screen">
+      <h2 class="page-heading">Checkout</h2>
+
+      <!-- Step 1: Identify bidder -->
+      <div id="checkout-step-1">
+        <div class="card">
+          <div class="form-group mb-16">
+            <label for="checkout-bidder-num">Bidder number</label>
+            <input type="number" id="checkout-bidder-num" min="1" placeholder="Enter manually or scan QR">
+          </div>
+          <div class="form-actions">
+            <button id="btn-checkout-lookup" class="btn btn-primary">Look up bidder</button>
+            <button id="btn-checkout-scan" class="btn btn-accent">Scan QR code</button>
+          </div>
+          <div id="checkout-scan-wrap" class="hidden mt-16">
+            <div class="qr-scanner-wrap">
+              <video id="checkout-video" autoplay playsinline muted></video>
+              <div class="qr-scanner-overlay"><div class="qr-scanner-frame"></div></div>
+            </div>
+            <button id="btn-checkout-scan-stop" class="btn btn-secondary mt-8">Stop scanner</button>
+          </div>
+        </div>
+        <div id="checkout-lookup-error" class="form-error hidden"></div>
+      </div>
+
+      <!-- Step 2: Payment + delivery -->
+      <div id="checkout-step-2" class="hidden">
+        <div class="card mb-16">
+          <div class="flex-center gap-8 mb-16">
+            <div>
+              <div class="card-meta">Bidder</div>
+              <div class="card-title" id="co-bidder-name"></div>
+              <div class="text-muted" id="co-bidder-num"></div>
+            </div>
+            <button id="btn-checkout-back" class="btn btn-secondary btn-sm" style="margin-left:auto">← Back</button>
+          </div>
+
+          <h3 class="page-heading" style="font-size:var(--fs-xl)">Won quilts</h3>
+          <div id="co-quilts-list" class="mb-16"></div>
+
+          <div class="checkout-total">
+            <span>Total due</span>
+            <span class="amount" id="co-total-due">$0.00</span>
+          </div>
+        </div>
+
+        <div class="card mb-16">
+          <h3 class="page-heading" style="font-size:var(--fs-xl)">Payment</h3>
+          <div id="co-payment-lines"></div>
+          <button id="btn-add-payment-line" class="btn btn-secondary btn-sm mt-8">+ Add payment line</button>
+
+          <div class="checkout-total mt-16">
+            <span>Amount entered</span>
+            <span class="amount" id="co-amount-remitted">$0.00</span>
+          </div>
+          <div id="co-payment-mismatch" class="alert alert-needs hidden">
+            Amount entered does not match total due. Please resolve before confirming.
+          </div>
+
+          <div class="form-actions mt-16">
+            <button id="btn-confirm-checkout" class="btn btn-primary">Confirm checkout</button>
+          </div>
+          <div id="checkout-payment-error" class="form-error hidden"></div>
+        </div>
+
+        <!-- Step 3: Quilt delivery scan -->
+        <div id="checkout-step-3" class="hidden">
+          <div class="card">
+            <h3 class="page-heading" style="font-size:var(--fs-xl)">Scan quilts to confirm delivery</h3>
+            <div id="co-delivery-list" class="mb-16"></div>
+            <div class="form-actions">
+              <button id="btn-delivery-scan" class="btn btn-accent">Scan quilt QR</button>
+            </div>
+            <div id="delivery-scan-wrap" class="hidden mt-16">
+              <div class="qr-scanner-wrap">
+                <video id="delivery-video" autoplay playsinline muted></video>
+                <div class="qr-scanner-overlay"><div class="qr-scanner-frame"></div></div>
+              </div>
+              <button id="btn-delivery-scan-stop" class="btn btn-secondary mt-8">Stop scanner</button>
+            </div>
+            <div id="delivery-scan-feedback" class="form-success hidden"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Reports ───────────────────────────────────────────── -->
+    <div id="screen-reports" class="screen">
+      <h2 class="page-heading">Reports <small>Admin only</small></h2>
+
+      <div class="card mb-16 no-print">
+        <div class="flex gap-8 flex-wrap">
+          <button class="btn btn-accent" data-report="bidder">Bidder Summary</button>
+          <button class="btn btn-accent" data-report="unsold">Unsold Quilts</button>
+          <button class="btn btn-accent" data-report="unpaid">Unpaid Bidders</button>
+          <button class="btn btn-accent" data-report="methods">Payment Totals</button>
+        </div>
+      </div>
+
+      <div id="report-output"></div>
+
+      <div id="report-actions" class="hidden no-print mt-16">
+        <button id="btn-print-report" class="btn btn-primary">Print / Save PDF</button>
+      </div>
+    </div>
+
+    <!-- ── Admin ─────────────────────────────────────────────── -->
+    <div id="screen-admin" class="screen">
+      <h2 class="page-heading">Admin</h2>
+
+      <h3 class="page-heading" style="font-size:var(--fs-xl)">Pending account requests</h3>
+      <div id="admin-requests-list"></div>
+
+      <hr class="hr">
+
+      <h3 class="page-heading" style="font-size:var(--fs-xl)">All accounts</h3>
+      <div id="admin-users-list"></div>
+
+      <hr class="hr">
+
+      <h3 class="page-heading" style="font-size:var(--fs-xl)">Appearance</h3>
+      <div class="card">
+        <div class="form-group mb-16">
+          <label>Mode</label>
+          <div class="flex gap-8 mt-4">
+            <button class="btn btn-secondary btn-sm" id="btn-mode-dark">Dark</button>
+            <button class="btn btn-secondary btn-sm" id="btn-mode-light">Light</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Accent color</label>
+          <div class="theme-bar mt-4" id="theme-swatches">
+            <div class="theme-dot" data-theme="teal"   style="background:#45C0AE" title="Teal"></div>
+            <div class="theme-dot" data-theme="violet" style="background:#9B8CF2" title="Violet"></div>
+            <div class="theme-dot" data-theme="green"  style="background:#6FC287" title="Green"></div>
+            <div class="theme-dot" data-theme="blue"   style="background:#5A9DE0" title="Blue"></div>
+            <div class="theme-dot" data-theme="coral"  style="background:#E26B6B" title="Coral"></div>
+            <div class="theme-dot" data-theme="blood"  style="background:#B83A3A" title="Blood"></div>
+            <div class="theme-dot" data-theme="mono"   style="background:#D8D9DE" title="Mono"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── QR Modal (for viewing / printing a generated QR) ───── -->
+  <div id="qr-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-title" id="qr-modal-title">QR Code</div>
+      <div class="qr-wrap">
+        <canvas id="qr-modal-canvas"></canvas>
+        <div class="qr-label" id="qr-modal-label"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-qr-print" class="btn btn-accent">Print tag</button>
+        <button id="btn-qr-close" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Confirm-delete modal ───────────────────────────────── -->
+  <div id="confirm-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-title">Confirm delete</div>
+      <p id="confirm-modal-msg" class="text-muted mb-16"></p>
+      <div class="modal-actions">
+        <button id="btn-confirm-yes" class="btn btn-danger">Delete</button>
+        <button id="btn-confirm-no" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Scripts ────────────────────────────────────────────── -->
+  <script src="js/config.js"></script>
+  <script src="js/qr.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/quilts.js"></script>
+  <script src="js/bidders.js"></script>
+  <script src="js/bids.js"></script>
+  <script src="js/checkout.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
