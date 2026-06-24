@@ -39,15 +39,15 @@
   --mono-font: ui-monospace, Menlo, Consolas, monospace;
 
   /* Size scale */
-  --fs-xs:      9px;
-  --fs-sm:      10px;
-  --fs-base:    11px;
-  --fs-md:      12px;
-  --fs-lg:      13px;
-  --fs-xl:      14px;
-  --fs-2xl:     16px;
-  --fs-3xl:     18px;
-  --fs-display: 22px;
+  --fs-xs:      11px;
+  --fs-sm:      12px;
+  --fs-base:    14px;
+  --fs-md:      15px;
+  --fs-lg:      16px;
+  --fs-xl:      17px;
+  --fs-2xl:     18px;
+  --fs-3xl:     20px;
+  --fs-display: 24px;
 
   /* Radii */
   --r-xs:   2px;
@@ -165,7 +165,7 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: background .15s, color .15s, border-color .15s;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .nav-btn:hover {
@@ -283,7 +283,7 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: opacity .15s, background .15s, border-color .15s;
-  min-height: 40px;
+  min-height: 48px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -327,8 +327,8 @@ body {
 /* Small variant */
 .btn-sm {
   font-size: var(--fs-sm);
-  padding: 5px 10px;
-  min-height: 32px;
+  padding: 6px 12px;
+  min-height: 38px;
 }
 
 /* ── Forms ────────────────────────────────────────────────── */
@@ -374,11 +374,11 @@ select {
   color: var(--text);
   border: 1px solid var(--rule-med);
   border-radius: var(--r);
-  padding: 8px 10px;
+  padding: 10px 12px;
   width: 100%;
   outline: none;
   transition: border-color .15s;
-  min-height: 40px;
+  min-height: 48px;
 }
 
 input:focus, textarea:focus, select:focus {
@@ -545,7 +545,7 @@ tr:hover td { background: var(--glass); }
   color: var(--text-muted);
   cursor: pointer;
   transition: background .15s, color .15s;
-  min-height: 36px;
+  min-height: 44px;
   font-family: var(--sans);
 }
 
