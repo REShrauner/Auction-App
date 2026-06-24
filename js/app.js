@@ -49,6 +49,12 @@ $('btn-confirm-no').addEventListener('click', () => {
 const SCREENS = ['login','quilts','bidders','bids','checkout','reports','admin'];
 
 function showScreen(name) {
+  // Block access to screens the user doesn't have a role for
+  const restricted = ['quilts','bidders','bids','checkout','reports','admin'];
+  if (restricted.includes(name) && !userCanAccess(name)) {
+    return;
+  }
+
   SCREENS.forEach(s => {
     const el = $('screen-' + s);
     if (el) el.classList.toggle('active', s === name);
@@ -77,21 +83,56 @@ async function loadProfile(userId) {
   return data;
 }
 
+// ── Role helpers ──────────────────────────────────────────────
+
+const ROLE_SCREEN_MAP = {
+  'quilt_entry':    'quilts',
+  'bidder_entry':   'bidders',
+  'documentarian1': 'bids',
+  'documentarian2': 'bids',
+  'checkout':       'checkout',
+};
+
+function userCanAccess(screen) {
+  if (!currentProfile) return false;
+  if (currentProfile.is_admin) return true;
+  const roles = currentProfile.roles || [];
+  const allowed = Object.entries(ROLE_SCREEN_MAP)
+    .filter(([role]) => roles.includes(role))
+    .map(([, scr]) => scr);
+  return allowed.includes(screen);
+}
+
 function applySession(user, profile) {
   currentUser    = user;
   currentProfile = profile;
 
   const isAdmin = profile?.is_admin;
+  const roles   = profile?.roles || [];
 
   hide($('screen-login'));
   show($('app-nav'));
 
-  // Show/hide admin-only nav buttons
-  document.querySelectorAll('.admin-only').forEach(el => toggle(el, isAdmin));
+  // Show/hide nav buttons based on roles
+  document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
+    const screen = btn.dataset.screen;
+    const adminOnly = ['reports', 'admin'].includes(screen);
+    if (adminOnly) {
+      toggle(btn, isAdmin);
+    } else {
+      toggle(btn, isAdmin || userCanAccess(screen));
+    }
+  });
 
   $('nav-user-info').textContent = profile?.username || user?.email || '';
 
-  showScreen('quilts');
+  // Navigate to first accessible screen
+  const firstScreen = isAdmin ? 'quilts' :
+    Object.values(ROLE_SCREEN_MAP).find(s =>
+      roles.some(r => ROLE_SCREEN_MAP[r] === s)
+    ) || 'quilts';
+
+  showScreen(firstScreen);
 }
 
 function clearSession() {
