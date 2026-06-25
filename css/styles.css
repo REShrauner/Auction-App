@@ -897,6 +897,18 @@ tr:hover td { background: var(--glass); }
 .gap-8        { gap: 8px; }
 .gap-12       { gap: 12px; }
 .hidden       { display: none !important; }
+.quilt-search-wrap {
+  margin-bottom: 8px;
+}
+.quilt-search-wrap input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: var(--fs-md);
+  border: 1px solid #BBBBBB;
+  border-radius: var(--r);
+  box-sizing: border-box;
+}
+
 /* ── Quilt list ──────────────────────────────────────────────── */
 #quilt-list {
   overflow-y: auto;
@@ -943,17 +955,17 @@ tr:hover td { background: var(--glass); }
 #btn-quilt-add:hover:not(:disabled) { background: #38A090; border-color: #2C8A7C; }
 
 #btn-quilt-modify {
-  background: #555 !important;
-  border-color: #333 !important;
-  color: #fff !important;
+  background: #555;
+  border-color: #333;
+  color: #fff;
   font-weight: 700;
 }
-#btn-quilt-modify:hover:not(:disabled) { background: #666 !important; }
+#btn-quilt-modify:hover:not(:disabled) { background: #666; }
 
 #btn-quilt-delete {
-  background: #B83A3A !important;
-  border-color: #8C2828 !important;
-  color: #fff !important;
+  background: #B83A3A;
+  border-color: #8C2828;
+  color: #fff;
   font-weight: 700;
 }
-#btn-quilt-delete:hover:not(:disabled) { background: #D04848 !important; }
+#btn-quilt-delete:hover:not(:disabled) { background: #D04848; }

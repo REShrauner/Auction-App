@@ -49,6 +49,18 @@ function clearPhotoPreview() {
   show(photoPrompt);
 }
 
+// ── Search ────────────────────────────────────────────────────
+
+$('quilt-search').addEventListener('input', () => {
+  const term = $('quilt-search').value.trim().toLowerCase();
+  const filtered = term
+    ? allQuilts.filter(q =>
+        String(q.quilt_number).includes(term) ||
+        q.name.toLowerCase().includes(term))
+    : allQuilts;
+  renderQuiltList(filtered, null);
+});
+
 // ── List action buttons ───────────────────────────────────────
 
 $('btn-quilt-add').addEventListener('click', () => {
