@@ -897,3 +897,35 @@ tr:hover td { background: var(--glass); }
 .gap-8        { gap: 8px; }
 .gap-12       { gap: 12px; }
 .hidden       { display: none !important; }
+/* ── Quilt list ──────────────────────────────────────────────── */
+#quilt-list {
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+  min-height: 80px;
+  max-height: clamp(200px, 50vh, 480px);
+}
+
+.quilt-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.quilt-list-row:last-child { border-bottom: none; }
+.quilt-list-row:hover      { background: var(--surface-raised); }
+.quilt-list-row.selected   { background: var(--accent-12); color: var(--accent); }
+
+.quilt-list-num  { font-weight: 600; min-width: 80px; flex-shrink: 0; }
+.quilt-list-name { flex: 1; }
+
+.quilt-list-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}

@@ -1,6 +1,7 @@
 // ── Quilt entry, list, edit, delete ──────────────────────────
 
 let editingQuiltId   = null;
+let selectedQuiltId  = null;
 let quiltPhotoFile   = null;
 let allQuilts        = [];
 
@@ -47,6 +48,26 @@ function clearPhotoPreview() {
   hide(photoPreview);
   show(photoPrompt);
 }
+
+// ── List action buttons ───────────────────────────────────────
+
+$('btn-quilt-add').addEventListener('click', () => {
+  resetQuiltForm();
+  $('quilt-form-title').textContent = 'Add Quilt';
+  show($('quilt-form-wrap'));
+  $('quilt-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+$('btn-quilt-modify').addEventListener('click', () => {
+  if (!selectedQuiltId) return;
+  startEditQuilt(selectedQuiltId);
+});
+
+$('btn-quilt-delete').addEventListener('click', async () => {
+  if (!selectedQuiltId) return;
+  const q = allQuilts.find(x => x.id === selectedQuiltId);
+  if (q) await deleteQuilt(q.id, q.name);
+});
 
 // ── Save quilt ────────────────────────────────────────────────
 
@@ -97,27 +118,43 @@ async function saveQuilt() {
   }
 
   $('btn-save-quilt').disabled = false;
-  $('btn-save-quilt').textContent = editingQuiltId ? 'Save changes' : 'Save quilt';
+  $('btn-save-quilt').textContent = 'Save quilt';
 
   if (error) {
     setError($('quilt-form-error'), 'Could not save quilt: ' + error.message);
     return;
   }
 
+  hide($('quilt-form-wrap'));
   resetQuiltForm();
-  loadQuilts();
+  await loadQuilts();
 }
+
+// ── Cancel ────────────────────────────────────────────────────
+
+$('btn-cancel-quilt-edit').addEventListener('click', () => {
+  hide($('quilt-form-wrap'));
+  resetQuiltForm();
+});
 
 function resetQuiltForm() {
   editingQuiltId = null;
-  ['qf-name','qf-piecer','qf-quilter','qf-width','qf-height','qf-pitch'].forEach(id => { $(id).value = ''; });
+  ['qf-name','qf-piecer','qf-quilter','qf-width','qf-height','qf-pitch']
+    .forEach(id => { $(id).value = ''; });
   clearPhotoPreview();
   $('btn-save-quilt').textContent = 'Save quilt';
-  hide($('btn-cancel-quilt-edit'));
+  hide($('btn-show-qr'));
   setError($('quilt-form-error'), '');
 }
 
-$('btn-cancel-quilt-edit').addEventListener('click', resetQuiltForm);
+// ── Show QR (inside edit form) ────────────────────────────────
+
+$('btn-show-qr').addEventListener('click', () => {
+  const q = allQuilts.find(x => x.id === editingQuiltId);
+  if (!q) return;
+  openQRModal(`Quilt #${q.quilt_number}`, q.quilt_number,
+    `Quilt #${q.quilt_number} — ${q.name}`);
+});
 
 // ── Load quilt list ───────────────────────────────────────────
 
@@ -129,58 +166,59 @@ async function loadQuilts() {
 
   allQuilts = data || [];
   renderQuiltList(allQuilts, error);
-
-  // Keep bid quilt selector in sync
   populateBidQuiltSelect();
 }
 
 function renderQuiltList(quilts, error) {
   const wrap = $('quilt-list');
-  if (error) { wrap.innerHTML = '<div class="alert alert-needs">Could not load quilts.</div>'; return; }
+  if (error) {
+    wrap.innerHTML = '<div class="alert alert-needs">Could not load quilts.</div>';
+    return;
+  }
   if (!quilts || quilts.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">No quilts registered yet.</div>';
+    wrap.innerHTML = '<div class="empty-state">No Quilts Entered</div>';
+    setQuiltSelection(null);
     return;
   }
 
   wrap.innerHTML = quilts.map(q => `
-    <div class="card" id="quilt-card-${q.id}">
-      <div class="card-row">
-        ${q.photo_url ? `<img src="${esc(q.photo_url)}" alt="Quilt photo"
-            style="width:80px;height:80px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0">` : ''}
-        <div style="flex:1;min-width:0">
-          <div class="card-meta">Quilt #${q.quilt_number}</div>
-          <div class="card-title">${esc(q.name)}</div>
-          <div class="card-sub">${esc(q.width_in)}" × ${esc(q.height_in)}" &nbsp;·&nbsp;
-            Pieced by ${esc(q.piecer_name)} &nbsp;·&nbsp; Quilted by ${esc(q.quilter_name)}</div>
-          ${q.sales_pitch ? `<div class="card-sub mt-4 text-faint">${esc(q.sales_pitch)}</div>` : ''}
-        </div>
-      </div>
-      <div class="card-actions">
-        <button class="btn btn-accent btn-sm" data-action="qr" data-id="${q.id}"
-          data-num="${q.quilt_number}" data-name="${esc(q.name)}">Show QR</button>
-        <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${q.id}">Edit</button>
-        <button class="btn btn-danger btn-sm" data-action="delete" data-id="${q.id}"
-          data-name="${esc(q.name)}">Delete</button>
-      </div>
+    <div class="quilt-list-row" data-id="${q.id}" tabindex="0"
+         role="option" aria-selected="false">
+      <span class="quilt-list-num">Quilt #${q.quilt_number}</span>
+      <span class="quilt-list-name">${esc(q.name)}</span>
     </div>
   `).join('');
 
-  wrap.querySelectorAll('[data-action="qr"]').forEach(btn => {
-    btn.addEventListener('click', () =>
-      openQRModal(`Quilt #${btn.dataset.num}`, btn.dataset.num,
-        `Quilt #${btn.dataset.num} — ${btn.dataset.name}`));
+  wrap.querySelectorAll('.quilt-list-row').forEach(row => {
+    row.addEventListener('click',    () => setQuiltSelection(row.dataset.id));
+    row.addEventListener('keydown',  e => {
+      if (e.key === 'Enter' || e.key === ' ') setQuiltSelection(row.dataset.id);
+    });
   });
 
-  wrap.querySelectorAll('[data-action="edit"]').forEach(btn => {
-    btn.addEventListener('click', () => startEditQuilt(btn.dataset.id));
-  });
+  // Re-apply selection highlight if a quilt was previously selected
+  if (selectedQuiltId) highlightSelectedRow();
+}
 
-  wrap.querySelectorAll('[data-action="delete"]').forEach(btn => {
-    btn.addEventListener('click', () => deleteQuilt(btn.dataset.id, btn.dataset.name));
+function setQuiltSelection(id) {
+  selectedQuiltId = id;
+  highlightSelectedRow();
+  const hasSelection = !!id;
+  $('btn-quilt-modify').disabled = !hasSelection;
+  $('btn-quilt-delete').disabled = !hasSelection;
+}
+
+function highlightSelectedRow() {
+  $('quilt-list').querySelectorAll('.quilt-list-row').forEach(row => {
+    const selected = row.dataset.id === selectedQuiltId;
+    row.classList.toggle('selected', selected);
+    row.setAttribute('aria-selected', selected);
   });
 }
 
-async function startEditQuilt(id) {
+// ── Edit quilt ────────────────────────────────────────────────
+
+function startEditQuilt(id) {
   const q = allQuilts.find(x => x.id === id);
   if (!q) return;
 
@@ -201,14 +239,22 @@ async function startEditQuilt(id) {
   }
 
   $('btn-save-quilt').textContent = 'Save changes';
-  show($('btn-cancel-quilt-edit'));
+  $('quilt-form-title').textContent = 'Modify Quilt';
+  show($('btn-show-qr'));
+  show($('quilt-form-wrap'));
   $('quilt-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+// ── Delete quilt ──────────────────────────────────────────────
 
 async function deleteQuilt(id, name) {
   const ok = await confirmDelete(`Delete quilt "${name}"? This cannot be undone.`);
   if (!ok) return;
   await sb.from('quilts').delete().eq('id', id);
-  if (editingQuiltId === id) resetQuiltForm();
+  if (editingQuiltId === id) {
+    hide($('quilt-form-wrap'));
+    resetQuiltForm();
+  }
+  setQuiltSelection(null);
   loadQuilts();
 }
