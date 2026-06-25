@@ -943,17 +943,17 @@ tr:hover td { background: var(--glass); }
 #btn-quilt-add:hover:not(:disabled) { background: #38A090; border-color: #2C8A7C; }
 
 #btn-quilt-modify {
-  background: #555;
-  border-color: #333;
-  color: #fff;
+  background: #555 !important;
+  border-color: #333 !important;
+  color: #fff !important;
   font-weight: 700;
 }
-#btn-quilt-modify:hover:not(:disabled) { background: #666; }
+#btn-quilt-modify:hover:not(:disabled) { background: #666 !important; }
 
 #btn-quilt-delete {
-  background: #B83A3A;
-  border-color: #8C2828;
-  color: #fff;
+  background: #B83A3A !important;
+  border-color: #8C2828 !important;
+  color: #fff !important;
   font-weight: 700;
 }
-#btn-quilt-delete:hover:not(:disabled) { background: #D04848; }
+#btn-quilt-delete:hover:not(:disabled) { background: #D04848 !important; }
