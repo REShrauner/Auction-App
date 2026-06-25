@@ -979,7 +979,7 @@ tr:hover td { background: var(--glass); }
 #btn-bidder-delete:hover:not(:disabled) { background: #D04848 !important; }
 
 /* ── Quilt list ──────────────────────────────────────────────── */
-#quilt-list {
+#quilt-list, #bidder-list {
   overflow-y: auto;
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
