@@ -905,6 +905,7 @@ tr:hover td { background: var(--glass); }
   margin-bottom: 12px;
   min-height: 80px;
   max-height: clamp(200px, 50vh, 480px);
+  background: var(--accent-20);
 }
 
 .quilt-list-row {
