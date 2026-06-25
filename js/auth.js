@@ -19,7 +19,7 @@ document.querySelectorAll('.login-tab').forEach(tab => {
 // ── Sign in ───────────────────────────────────────────────────
 
 function usernameToEmail(username) {
-  // Supabase auth requires an email; we map username → username@quiltauction.local
+  // Supabase auth requires an email; we map username → username@quiltauction.com
   return username.trim().toLowerCase() + '@quiltauction.com';
 }
 
