@@ -20,7 +20,7 @@ document.querySelectorAll('.login-tab').forEach(tab => {
 
 function usernameToEmail(username) {
   // Supabase auth requires an email; we map username → username@quiltauction.local
-  return username.trim().toLowerCase() + '@quiltauction.local';
+  return username.trim().toLowerCase() + '@quiltauction.com';
 }
 
 $('btn-login').addEventListener('click', async () => {
