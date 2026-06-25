@@ -897,19 +897,46 @@ tr:hover td { background: var(--glass); }
 .gap-8        { gap: 8px; }
 .gap-12       { gap: 12px; }
 .hidden       { display: none !important; }
-.quilt-search-wrap {
-  margin-bottom: 8px;
-}
-.quilt-search-wrap input {
+/* ── Scanner modal ───────────────────────────────────────────── */
+.scanner-wrap {
   width: 100%;
-  padding: 10px 14px;
-  font-size: var(--fs-md);
-  border: 1px solid #BBBBBB;
-  border-radius: var(--r);
-  box-sizing: border-box;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #000;
+}
+.scanner-video {
+  width: 100%;
+  display: block;
+  max-height: 280px;
+  object-fit: cover;
 }
 
-/* ── Quilt list ──────────────────────────────────────────────── */
+/* ── Bidder action buttons ───────────────────────────────────── */
+#btn-bidder-add {
+  background: #2C8A7C !important;
+  border-color: #1F6058 !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+#btn-bidder-add:hover:not(:disabled) { background: #38A090 !important; }
+
+#btn-bidder-modify {
+  background: #555 !important;
+  border-color: #333 !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+#btn-bidder-modify:hover:not(:disabled) { background: #666 !important; }
+
+#btn-bidder-delete {
+  background: #B83A3A !important;
+  border-color: #8C2828 !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+#btn-bidder-delete:hover:not(:disabled) { background: #D04848 !important; }
 #quilt-list {
   overflow-y: auto;
   border: 1px solid var(--rule);
