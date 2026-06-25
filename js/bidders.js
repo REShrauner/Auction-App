@@ -68,49 +68,45 @@ async function saveBidder() {
     setError($('bidder-form-error'), 'Name is required.');
     return;
   }
-  if (!cardNum) {
-    setError($('bidder-form-error'), 'Please scan or enter a bidder card number.');
-    return;
-  }
 
   $('btn-save-bidder').disabled = true;
   $('btn-save-bidder').textContent = 'Saving…';
 
   if (!editingBidderId) {
-    // Validate card exists and is not assigned
-    const { data: card, error: cardError } = await sb
-      .from('bidder_cards')
-      .select('*')
-      .eq('card_number', cardNum)
-      .single();
+    // Card number is optional on Add
+    if (cardNum) {
+      const { data: card, error: cardError } = await sb
+        .from('bidder_cards')
+        .select('*')
+        .eq('card_number', cardNum)
+        .single();
 
-    if (cardError || !card) {
-      setError($('bidder-form-error'), 'Card number not recognised. Please scan the card or check the number.');
-      $('btn-save-bidder').disabled = false;
-      $('btn-save-bidder').textContent = 'Save bidder';
-      return;
-    }
-    if (card.assigned) {
-      setError($('bidder-form-error'), `Card #${cardNum} is already registered to another bidder.`);
-      $('btn-save-bidder').disabled = false;
-      $('btn-save-bidder').textContent = 'Save bidder';
-      return;
-    }
-    // If scanned, verify token matches
-    if (scannedCardToken && card.qr_token !== scannedCardToken) {
-      setError($('bidder-form-error'), 'Card token mismatch. Please rescan.');
-      $('btn-save-bidder').disabled = false;
-      $('btn-save-bidder').textContent = 'Save bidder';
-      return;
+      if (cardError || !card) {
+        setError($('bidder-form-error'), 'Card number not recognised. Please scan the card or check the number.');
+        $('btn-save-bidder').disabled = false;
+        $('btn-save-bidder').textContent = 'Save bidder';
+        return;
+      }
+      if (card.assigned) {
+        setError($('bidder-form-error'), `Card #${cardNum} is already registered to another bidder.`);
+        $('btn-save-bidder').disabled = false;
+        $('btn-save-bidder').textContent = 'Save bidder';
+        return;
+      }
+      if (scannedCardToken && card.qr_token !== scannedCardToken) {
+        setError($('bidder-form-error'), 'Card token mismatch. Please rescan.');
+        $('btn-save-bidder').disabled = false;
+        $('btn-save-bidder').textContent = 'Save bidder';
+        return;
+      }
     }
 
-    // Save bidder
     const { error } = await sb.from('bidders').insert({
       name,
-      address:      address || null,
-      phone:        phone   || null,
-      email:        email   || null,
-      bidder_number: cardNum,
+      address:       address || null,
+      phone:         phone   || null,
+      email:         email   || null,
+      bidder_number: cardNum || null,
     });
 
     if (error) {
@@ -120,16 +116,49 @@ async function saveBidder() {
       return;
     }
 
-    // Mark card as assigned
-    await sb.from('bidder_cards').update({ assigned: true }).eq('card_number', cardNum);
+    if (cardNum) {
+      await sb.from('bidder_cards').update({ assigned: true }).eq('card_number', cardNum);
+    }
 
   } else {
-    // Editing — update name/address/phone/email only, not card number
+    // Editing — update all fields including card number if being set for first time
+    const b = allBidders.find(x => x.id === editingBidderId);
+    const previousCardNum = b?.bidder_number;
+
+    if (cardNum && cardNum !== previousCardNum) {
+      // Validate the new card
+      const { data: card, error: cardError } = await sb
+        .from('bidder_cards')
+        .select('*')
+        .eq('card_number', cardNum)
+        .single();
+
+      if (cardError || !card) {
+        setError($('bidder-form-error'), 'Card number not recognised. Please scan the card or check the number.');
+        $('btn-save-bidder').disabled = false;
+        $('btn-save-bidder').textContent = 'Save changes';
+        return;
+      }
+      if (card.assigned) {
+        setError($('bidder-form-error'), `Card #${cardNum} is already registered to another bidder.`);
+        $('btn-save-bidder').disabled = false;
+        $('btn-save-bidder').textContent = 'Save changes';
+        return;
+      }
+      if (scannedCardToken && card.qr_token !== scannedCardToken) {
+        setError($('bidder-form-error'), 'Card token mismatch. Please rescan.');
+        $('btn-save-bidder').disabled = false;
+        $('btn-save-bidder').textContent = 'Save changes';
+        return;
+      }
+    }
+
     const { error } = await sb.from('bidders').update({
       name,
-      address: address || null,
-      phone:   phone   || null,
-      email:   email   || null,
+      address:       address || null,
+      phone:         phone   || null,
+      email:         email   || null,
+      bidder_number: cardNum || previousCardNum || null,
     }).eq('id', editingBidderId);
 
     if (error) {
@@ -137,6 +166,11 @@ async function saveBidder() {
       $('btn-save-bidder').disabled = false;
       $('btn-save-bidder').textContent = 'Save changes';
       return;
+    }
+
+    // Mark new card as assigned
+    if (cardNum && cardNum !== previousCardNum) {
+      await sb.from('bidder_cards').update({ assigned: true }).eq('card_number', cardNum);
     }
   }
 
@@ -155,6 +189,7 @@ function resetBidderForm() {
     .forEach(id => { $(id).value = ''; });
   $('btn-save-bidder').textContent = 'Save bidder';
   $('bf-card-number').readOnly = false;
+  show($('btn-scan-card'));
   hide($('btn-bidder-show-qr'));
   setError($('bidder-form-error'), '');
 }
@@ -242,13 +277,17 @@ function startEditBidder(id) {
   $('bf-address').value     = b.address || '';
   $('bf-phone').value       = b.phone   || '';
   $('bf-email').value       = b.email   || '';
-  $('bf-card-number').value = b.bidder_number;
-  $('bf-card-number').readOnly = true;
+  $('bf-card-number').value = b.bidder_number || '';
+  $('bf-card-number').readOnly = !!b.bidder_number;
 
   $('btn-save-bidder').textContent = 'Save changes';
   $('bidder-form-title').textContent = 'Modify Bidder';
-  show($('btn-bidder-show-qr'));
-  hide($('btn-scan-card'));
+  show($('btn-scan-card'));
+  if (b.bidder_number) {
+    show($('btn-bidder-show-qr'));
+  } else {
+    hide($('btn-bidder-show-qr'));
+  }
   show($('bidder-form-wrap'));
   $('bidder-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

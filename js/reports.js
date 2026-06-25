@@ -11,10 +11,11 @@ async function runReport(type) {
   show($('report-actions'));
 
   switch (type) {
-    case 'bidder':  await reportBidderSummary(); break;
-    case 'unsold':  await reportUnsoldQuilts();  break;
-    case 'unpaid':  await reportUnpaidBidders(); break;
-    case 'methods': await reportPaymentMethods(); break;
+    case 'bidder':  await reportBidderSummary();    break;
+    case 'unsold':  await reportUnsoldQuilts();     break;
+    case 'unpaid':  await reportUnpaidBidders();    break;
+    case 'methods': await reportPaymentMethods();   break;
+    case 'nocard':  await reportBiddersWithoutCard(); break;
   }
 }
 
@@ -237,6 +238,47 @@ async function reportPaymentMethods() {
             <td class="fw-bold" style="padding-top:10px">Grand total</td>
             <td class="text-right fw-bold text-accent" style="padding-top:10px">${fmtMoney(grandTotal)}</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── Report 5: Bidders Without Card/QR Code ───────────────────
+
+async function reportBiddersWithoutCard() {
+  const { data: bidders, error } = await sb
+    .from('bidders')
+    .select('bidder_number, name, address, phone, email')
+    .is('bidder_number', null)
+    .order('name', { ascending: true });
+
+  if (error) {
+    $('report-output').innerHTML = '<div class="alert alert-needs">Could not load bidders.</div>';
+    return;
+  }
+
+  if (!bidders || bidders.length === 0) {
+    $('report-output').innerHTML = '<div class="empty-state">All bidders have been assigned a card.</div>';
+    return;
+  }
+
+  $('report-output').innerHTML = `
+    <h3 style="font-size:var(--fs-xl);font-weight:700;margin-bottom:16px">
+      Bidders Without Card <span class="text-muted">(${bidders.length})</span>
+    </h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Phone</th><th>Email</th></tr>
+        </thead>
+        <tbody>
+          ${bidders.map(b => `
+            <tr>
+              <td>${esc(b.name)}</td>
+              <td>${esc(b.phone || '—')}</td>
+              <td>${esc(b.email || '—')}</td>
+            </tr>`).join('')}
         </tbody>
       </table>
     </div>
