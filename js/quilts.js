@@ -184,7 +184,7 @@ function renderQuiltList(quilts, error) {
   wrap.innerHTML = quilts.map(q => `
     <div class="quilt-list-row" data-id="${q.id}" tabindex="0"
          role="option" aria-selected="false">
-      <span class="quilt-list-num">Quilt #${q.quilt_number}</span>
+      <span class="quilt-list-num">${q.quilt_number}</span>
       <span class="quilt-list-name">${esc(q.name)}</span>
     </div>
   `).join('');
