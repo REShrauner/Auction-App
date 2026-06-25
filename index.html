@@ -457,6 +457,52 @@
         </div>
       </div>
 
+      <!-- Delete card range -->
+      <div class="card" style="margin-top:12px">
+        <p class="text-muted mb-16">Delete a range of cards. To delete a single card, set count to 1.</p>
+        <button id="btn-delete-range-show" class="btn btn-secondary">Delete Card Range</button>
+        <div id="delete-range-form" class="hidden" style="margin-top:16px">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="del-range-start">Starting number</label>
+              <input type="number" id="del-range-start" min="1" step="1">
+            </div>
+            <div class="form-group">
+              <label for="del-range-count">Number of cards</label>
+              <input type="number" id="del-range-count" min="1" step="1" value="1">
+            </div>
+          </div>
+          <div id="delete-range-error" class="form-error hidden"></div>
+          <div id="delete-range-warning" class="hidden" style="margin-bottom:12px;padding:10px;background:#FFF3CD;border:1px solid #FFCC00;border-radius:var(--r);color:#7A5C00;font-size:var(--fs-md)"></div>
+          <div class="form-actions">
+            <button id="btn-delete-range-go"     class="btn btn-danger">Delete Range</button>
+            <button id="btn-delete-range-cancel" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clear unassigned -->
+      <div class="card" style="margin-top:12px">
+        <p class="text-muted mb-16">Remove all cards that have not yet been assigned to a bidder.</p>
+        <button id="btn-clear-unassigned" class="btn btn-secondary">Clear Unassigned Cards</button>
+      </div>
+
+      <!-- Nuclear option -->
+      <div class="card" style="margin-top:12px;border:2px solid #B83A3A">
+        <p style="font-weight:700;color:#B83A3A;margin-bottom:8px">⚠ Danger Zone</p>
+        <p class="text-muted mb-16">Delete ALL bidder cards including those already assigned to registered bidders. This cannot be undone.</p>
+        <button id="btn-delete-all-cards" class="btn btn-danger">Delete ALL Cards</button>
+        <div id="delete-all-confirm" class="hidden" style="margin-top:16px">
+          <p style="margin-bottom:10px;font-size:var(--fs-md);color:#B83A3A" id="delete-all-warning-msg"></p>
+          <label style="display:block;margin-bottom:6px;font-size:var(--fs-md)">Type <strong>DELETE</strong> to confirm:</label>
+          <input type="text" id="delete-all-input" placeholder="DELETE" style="margin-bottom:10px;width:100%;max-width:200px">
+          <div class="form-actions">
+            <button id="btn-delete-all-go"     class="btn btn-danger">Delete Everything</button>
+            <button id="btn-delete-all-cancel" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <hr class="hr">
 
       <h3 class="page-heading" style="font-size:var(--fs-xl)">Appearance</h3>
