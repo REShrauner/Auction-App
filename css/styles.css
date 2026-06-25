@@ -897,6 +897,46 @@ tr:hover td { background: var(--glass); }
 .gap-8        { gap: 8px; }
 .gap-12       { gap: 12px; }
 .hidden       { display: none !important; }
+/* ── Admin tabs ──────────────────────────────────────────────── */
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #BBBBBB;
+  flex-wrap: wrap;
+}
+.admin-tab {
+  padding: 10px 18px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+  min-height: 48px;
+}
+.admin-tab:hover  { color: var(--text); }
+.admin-tab.active { color: #2C8A7C; border-bottom-color: #2C8A7C; }
+.admin-tab-panel  { display: block; }
+.admin-tab-panel.hidden { display: none !important; }
+
+/* ── Search bar ──────────────────────────────────────────────── */
+.quilt-search-wrap {
+  margin-bottom: 8px;
+}
+.quilt-search-wrap input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: var(--fs-lg);
+  border: 2px solid #BBBBBB;
+  border-radius: var(--r);
+  box-sizing: border-box;
+  min-height: 48px;
+}
+
 /* ── Scanner modal ───────────────────────────────────────────── */
 .scanner-wrap {
   width: 100%;
@@ -937,6 +977,8 @@ tr:hover td { background: var(--glass); }
   font-weight: 700;
 }
 #btn-bidder-delete:hover:not(:disabled) { background: #D04848 !important; }
+
+/* ── Quilt list ──────────────────────────────────────────────── */
 #quilt-list {
   overflow-y: auto;
   border: 1px solid var(--rule);

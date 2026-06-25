@@ -115,6 +115,26 @@ $('btn-request').addEventListener('click', async () => {
 // ── Admin: load pending requests + all accounts ───────────────
 
 async function loadAdmin() {
+  // Tab switching
+  document.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.add('hidden'));
+      tab.classList.add('active');
+      $('admin-tab-' + tab.dataset.tab).classList.remove('hidden');
+    });
+  });
+
+  // Reports tab — wire report buttons to the admin-tab output divs
+  document.querySelectorAll('#admin-tab-reports [data-report]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (typeof runReport === 'function') {
+        runReport(btn.dataset.report, $('admin-report-output'), $('admin-report-actions'));
+      }
+    });
+  });
+  $('btn-print-admin-report').addEventListener('click', () => window.print());
+
   await loadPendingRequests();
   await loadAllUsers();
 }

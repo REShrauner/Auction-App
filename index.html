@@ -170,32 +170,8 @@
     <div id="screen-bidders" class="screen">
       <h2 class="page-heading">Bidders</h2>
 
-      <!-- Search -->
-      <div class="quilt-search-wrap">
-        <input type="search" id="bidder-search" placeholder="Search by number or name…" autocomplete="off">
-      </div>
-
-      <!-- Scrollable bidder list -->
-      <div id="bidder-list"></div>
-
-      <!-- Action buttons -->
-      <div class="quilt-list-actions">
-        <button id="btn-bidder-add"    class="btn btn-primary">Add Bidder</button>
-        <button id="btn-bidder-modify" class="btn btn-secondary" disabled>Modify Bidder</button>
-        <button id="btn-bidder-delete" class="btn btn-danger"    disabled>Delete Bidder</button>
-      </div>
-
-      <!-- Entry / edit form (hidden until Add or Modify) -->
-      <div class="form-card hidden" id="bidder-form-wrap">
-        <h3 class="page-heading" style="font-size:var(--fs-xl)" id="bidder-form-title">Add Bidder</h3>
+      <div class="form-card">
         <div class="form-grid">
-          <div class="form-group full-width">
-            <label for="bf-card-number">Bidder card number *</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="number" id="bf-card-number" min="1" step="1" style="flex:1">
-              <button id="btn-scan-card" class="btn btn-accent">Scan Card</button>
-            </div>
-          </div>
           <div class="form-group">
             <label for="bf-name">Name *</label>
             <input type="text" id="bf-name">
@@ -215,11 +191,12 @@
         </div>
         <div id="bidder-form-error" class="form-error hidden"></div>
         <div class="form-actions">
-          <button id="btn-save-bidder"     class="btn btn-primary">Save bidder</button>
-          <button id="btn-bidder-show-qr"  class="btn btn-accent hidden">Show QR</button>
-          <button id="btn-cancel-bidder-edit" class="btn btn-secondary">Cancel</button>
+          <button id="btn-save-bidder" class="btn btn-primary">Save bidder</button>
+          <button id="btn-cancel-bidder-edit" class="btn btn-secondary hidden">Cancel edit</button>
         </div>
       </div>
+
+      <div id="bidder-list"></div>
     </div>
 
     <!-- ── Bid Documentation ─────────────────────────────────── -->
@@ -424,109 +401,145 @@
     <div id="screen-admin" class="screen">
       <h2 class="page-heading">Admin</h2>
 
-      <h3 class="page-heading" style="font-size:var(--fs-xl)">Pending account requests</h3>
-      <div id="admin-requests-list"></div>
-
-      <hr class="hr">
-
-      <h3 class="page-heading" style="font-size:var(--fs-xl)">All accounts</h3>
-      <div id="admin-users-list"></div>
-
-      <hr class="hr">
-
-      <h3 class="page-heading" style="font-size:var(--fs-xl)">Bidder Cards</h3>
-      <div class="card">
-        <p class="text-muted mb-16">Generate and print pre-numbered bidder cards with QR codes.</p>
-        <button id="btn-print-cards" class="btn btn-accent">Print Bidder Cards</button>
-        <div id="print-cards-form" class="hidden" style="margin-top:16px">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="cards-start">Starting number</label>
-              <input type="number" id="cards-start" min="1" step="1" value="1">
-            </div>
-            <div class="form-group">
-              <label for="cards-count">Number of cards</label>
-              <input type="number" id="cards-count" min="1" max="200" step="1" value="50">
-            </div>
-          </div>
-          <div id="print-cards-error" class="form-error hidden"></div>
-          <div class="form-actions">
-            <button id="btn-print-cards-go"     class="btn btn-primary">Generate &amp; Print</button>
-            <button id="btn-print-cards-cancel" class="btn btn-secondary">Cancel</button>
-          </div>
-        </div>
+      <!-- Tab bar -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="accounts">Accounts</button>
+        <button class="admin-tab" data-tab="cards">Bidder Cards</button>
+        <button class="admin-tab" data-tab="appearance">Appearance</button>
+        <button class="admin-tab" data-tab="reports">Reports</button>
       </div>
 
-      <!-- Delete card range -->
-      <div class="card" style="margin-top:12px">
-        <p class="text-muted mb-16">Delete a range of cards. To delete a single card, set count to 1.</p>
-        <button id="btn-delete-range-show" class="btn btn-secondary">Delete Card Range</button>
-        <div id="delete-range-form" class="hidden" style="margin-top:16px">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="del-range-start">Starting number</label>
-              <input type="number" id="del-range-start" min="1" step="1">
+      <!-- ── Accounts tab ── -->
+      <div class="admin-tab-panel active" id="admin-tab-accounts">
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">Pending account requests</h3>
+        <div id="admin-requests-list"></div>
+
+        <hr class="hr">
+
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">All accounts</h3>
+        <div id="admin-users-list"></div>
+      </div>
+
+      <!-- ── Bidder Cards tab ── -->
+      <div class="admin-tab-panel hidden" id="admin-tab-cards">
+
+        <!-- Print cards -->
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">Print Cards</h3>
+        <div class="card">
+          <p class="text-muted mb-16">Generate and print pre-numbered bidder cards with QR codes.</p>
+          <button id="btn-print-cards" class="btn btn-accent">Print Bidder Cards</button>
+          <div id="print-cards-form" class="hidden" style="margin-top:16px">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="cards-start">Starting number</label>
+                <input type="number" id="cards-start" min="1" step="1" value="1">
+              </div>
+              <div class="form-group">
+                <label for="cards-count">Number of cards</label>
+                <input type="number" id="cards-count" min="1" max="200" step="1" value="50">
+              </div>
             </div>
-            <div class="form-group">
-              <label for="del-range-count">Number of cards</label>
-              <input type="number" id="del-range-count" min="1" step="1" value="1">
+            <div id="print-cards-error" class="form-error hidden"></div>
+            <div class="form-actions">
+              <button id="btn-print-cards-go"     class="btn btn-primary">Generate &amp; Print</button>
+              <button id="btn-print-cards-cancel" class="btn btn-secondary">Cancel</button>
             </div>
           </div>
-          <div id="delete-range-error" class="form-error hidden"></div>
-          <div id="delete-range-warning" class="hidden" style="margin-bottom:12px;padding:10px;background:#FFF3CD;border:1px solid #FFCC00;border-radius:var(--r);color:#7A5C00;font-size:var(--fs-md)"></div>
-          <div class="form-actions">
-            <button id="btn-delete-range-go"     class="btn btn-danger">Delete Range</button>
-            <button id="btn-delete-range-cancel" class="btn btn-secondary">Cancel</button>
+        </div>
+
+        <!-- Delete range -->
+        <h3 class="page-heading" style="font-size:var(--fs-xl);margin-top:20px">Delete Card Range</h3>
+        <div class="card">
+          <p class="text-muted mb-16">Delete a range of cards. To delete a single card, set count to 1.</p>
+          <button id="btn-delete-range-show" class="btn btn-secondary">Delete Card Range</button>
+          <div id="delete-range-form" class="hidden" style="margin-top:16px">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="del-range-start">Starting number</label>
+                <input type="number" id="del-range-start" min="1" step="1">
+              </div>
+              <div class="form-group">
+                <label for="del-range-count">Number of cards</label>
+                <input type="number" id="del-range-count" min="1" step="1" value="1">
+              </div>
+            </div>
+            <div id="delete-range-error" class="form-error hidden"></div>
+            <div id="delete-range-warning" class="hidden" style="margin-bottom:12px;padding:10px;background:#FFF3CD;border:1px solid #FFCC00;border-radius:var(--r);color:#7A5C00;font-size:var(--fs-md)"></div>
+            <div class="form-actions">
+              <button id="btn-delete-range-go"     class="btn btn-danger">Delete Range</button>
+              <button id="btn-delete-range-cancel" class="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clear unassigned -->
+        <h3 class="page-heading" style="font-size:var(--fs-xl);margin-top:20px">Clear Unassigned</h3>
+        <div class="card">
+          <p class="text-muted mb-16">Remove all cards that have not yet been assigned to a bidder.</p>
+          <button id="btn-clear-unassigned" class="btn btn-secondary">Clear Unassigned Cards</button>
+        </div>
+
+        <!-- Nuclear option -->
+        <h3 class="page-heading" style="font-size:var(--fs-xl);margin-top:20px">Danger Zone</h3>
+        <div class="card" style="border:2px solid #B83A3A">
+          <p style="font-weight:700;color:#B83A3A;margin-bottom:8px">⚠ Delete ALL Cards</p>
+          <p class="text-muted mb-16">Deletes every card including those assigned to registered bidders. Cannot be undone.</p>
+          <button id="btn-delete-all-cards" class="btn btn-danger">Delete ALL Cards</button>
+          <div id="delete-all-confirm" class="hidden" style="margin-top:16px">
+            <p style="margin-bottom:10px;font-size:var(--fs-md);color:#B83A3A" id="delete-all-warning-msg"></p>
+            <label style="display:block;margin-bottom:6px;font-size:var(--fs-md)">Type <strong>DELETE</strong> to confirm:</label>
+            <input type="text" id="delete-all-input" placeholder="DELETE" style="margin-bottom:10px;width:100%;max-width:200px">
+            <div class="form-actions">
+              <button id="btn-delete-all-go"     class="btn btn-danger">Delete Everything</button>
+              <button id="btn-delete-all-cancel" class="btn btn-secondary">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Clear unassigned -->
-      <div class="card" style="margin-top:12px">
-        <p class="text-muted mb-16">Remove all cards that have not yet been assigned to a bidder.</p>
-        <button id="btn-clear-unassigned" class="btn btn-secondary">Clear Unassigned Cards</button>
-      </div>
-
-      <!-- Nuclear option -->
-      <div class="card" style="margin-top:12px;border:2px solid #B83A3A">
-        <p style="font-weight:700;color:#B83A3A;margin-bottom:8px">⚠ Danger Zone</p>
-        <p class="text-muted mb-16">Delete ALL bidder cards including those already assigned to registered bidders. This cannot be undone.</p>
-        <button id="btn-delete-all-cards" class="btn btn-danger">Delete ALL Cards</button>
-        <div id="delete-all-confirm" class="hidden" style="margin-top:16px">
-          <p style="margin-bottom:10px;font-size:var(--fs-md);color:#B83A3A" id="delete-all-warning-msg"></p>
-          <label style="display:block;margin-bottom:6px;font-size:var(--fs-md)">Type <strong>DELETE</strong> to confirm:</label>
-          <input type="text" id="delete-all-input" placeholder="DELETE" style="margin-bottom:10px;width:100%;max-width:200px">
-          <div class="form-actions">
-            <button id="btn-delete-all-go"     class="btn btn-danger">Delete Everything</button>
-            <button id="btn-delete-all-cancel" class="btn btn-secondary">Cancel</button>
+      <!-- ── Appearance tab ── -->
+      <div class="admin-tab-panel hidden" id="admin-tab-appearance">
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">Appearance</h3>
+        <div class="card">
+          <div class="form-group mb-16">
+            <label>Mode</label>
+            <div class="flex gap-8 mt-4">
+              <button class="btn btn-secondary btn-sm" id="btn-mode-dark">Dark</button>
+              <button class="btn btn-secondary btn-sm" id="btn-mode-light">Light</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Accent color</label>
+            <div class="theme-bar mt-4" id="theme-swatches">
+              <div class="theme-dot" data-theme="teal"   style="background:#45C0AE" title="Teal"></div>
+              <div class="theme-dot" data-theme="violet" style="background:#9B8CF2" title="Violet"></div>
+              <div class="theme-dot" data-theme="green"  style="background:#6FC287" title="Green"></div>
+              <div class="theme-dot" data-theme="blue"   style="background:#5A9DE0" title="Blue"></div>
+              <div class="theme-dot" data-theme="coral"  style="background:#E26B6B" title="Coral"></div>
+              <div class="theme-dot" data-theme="blood"  style="background:#B83A3A" title="Blood"></div>
+              <div class="theme-dot" data-theme="mono"   style="background:#D8D9DE" title="Mono"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <hr class="hr">
-
-      <h3 class="page-heading" style="font-size:var(--fs-xl)">Appearance</h3>
-      <div class="card">
-        <div class="form-group mb-16">
-          <label>Mode</label>
-          <div class="flex gap-8 mt-4">
-            <button class="btn btn-secondary btn-sm" id="btn-mode-dark">Dark</button>
-            <button class="btn btn-secondary btn-sm" id="btn-mode-light">Light</button>
+      <!-- ── Reports tab ── -->
+      <div class="admin-tab-panel hidden" id="admin-tab-reports">
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">Reports</h3>
+        <div class="card mb-16">
+          <div class="flex gap-8 flex-wrap">
+            <button class="btn btn-accent" data-report="bidder">Bidder Summary</button>
+            <button class="btn btn-accent" data-report="unsold">Unsold Quilts</button>
+            <button class="btn btn-accent" data-report="unpaid">Unpaid Bidders</button>
+            <button class="btn btn-accent" data-report="methods">Payment Totals</button>
           </div>
         </div>
-        <div class="form-group">
-          <label>Accent color</label>
-          <div class="theme-bar mt-4" id="theme-swatches">
-            <div class="theme-dot" data-theme="teal"   style="background:#45C0AE" title="Teal"></div>
-            <div class="theme-dot" data-theme="violet" style="background:#9B8CF2" title="Violet"></div>
-            <div class="theme-dot" data-theme="green"  style="background:#6FC287" title="Green"></div>
-            <div class="theme-dot" data-theme="blue"   style="background:#5A9DE0" title="Blue"></div>
-            <div class="theme-dot" data-theme="coral"  style="background:#E26B6B" title="Coral"></div>
-            <div class="theme-dot" data-theme="blood"  style="background:#B83A3A" title="Blood"></div>
-            <div class="theme-dot" data-theme="mono"   style="background:#D8D9DE" title="Mono"></div>
-          </div>
+        <div id="admin-report-output"></div>
+        <div id="admin-report-actions" class="hidden mt-16">
+          <button id="btn-print-admin-report" class="btn btn-primary">Print / Save PDF</button>
         </div>
       </div>
+
     </div>
 
   </main>
@@ -546,24 +559,6 @@
     </div>
   </div>
 
-  <!-- ── QR Scanner modal ──────────────────────────────────── -->
-  <div id="scanner-modal" class="modal-backdrop hidden">
-    <div class="modal">
-      <div class="modal-title">Scan Bidder Card</div>
-      <div class="scanner-wrap">
-        <video id="scanner-video" class="scanner-video" muted playsinline></video>
-        <canvas id="scanner-canvas" class="hidden"></canvas>
-      </div>
-      <div id="scanner-error" class="form-error hidden" style="margin-top:8px"></div>
-      <p class="text-muted" style="font-size:var(--fs-sm);margin-top:8px">
-        Point your camera at the QR code on the bidder card.
-      </p>
-      <div class="modal-actions">
-        <button id="btn-scan-close" class="btn btn-secondary">Cancel</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ── Confirm-delete modal ───────────────────────────────── -->
   <div id="confirm-modal" class="modal-backdrop hidden">
     <div class="modal">
@@ -577,14 +572,12 @@
   </div>
 
   <!-- ── Scripts ────────────────────────────────────────────── -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/qr.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/quilts.js"></script>
   <script src="js/bidders.js"></script>
-  <script src="js/cards.js"></script>
   <script src="js/bids.js"></script>
   <script src="js/checkout.js"></script>
   <script src="js/reports.js"></script>
