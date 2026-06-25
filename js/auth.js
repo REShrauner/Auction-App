@@ -191,23 +191,32 @@ async function approveRequest({ reqId, name, username, password }) {
   const btn = document.querySelector(`[data-action="approve"][data-req-id="${reqId}"]`);
   if (btn) { btn.disabled = true; btn.textContent = 'Approving…'; }
 
-  // Call Edge Function with service-role access (bypasses email system entirely)
-  const resp = await fetch('https://uoqscftixhpdznjjghpa.supabase.co/functions/v1/create-user', {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': 'Bearer sb_publishable_TWubklssPT1o8Cf6JeE65w_Zzx8IUt5',
-    },
-    body: JSON.stringify({ username, password, full_name: name, roles }),
+  // Create the Supabase auth user via admin — we call a Supabase Edge Function
+  // that has service-role access. For now, use the workaround of signing up
+  // the user with their chosen credentials, then immediately approving.
+  // NOTE: This requires the "Disable email confirmations" setting in Supabase Auth.
+  // Use admin client to create user — bypasses email system entirely
+  const { data, error } = await sbAdmin.auth.admin.createUser({
+    email:         usernameToEmail(username),
+    password:      password,
+    email_confirm: true,
   });
 
-  const result = await resp.json();
-
-  if (!resp.ok || result.error) {
-    alert('Error creating account: ' + (result.error || 'Unknown error'));
+  if (error) {
+    alert('Error creating account: ' + error.message);
     if (btn) { btn.disabled = false; btn.textContent = 'Approve'; }
     return;
   }
+
+  // Create the profile row
+  await sbAdmin.from('profiles').upsert({
+    id:          data.user.id,
+    username:    username.trim().toLowerCase(),
+    full_name:   name,
+    is_admin:    false,
+    is_approved: true,
+    roles:       roles,
+  });
 
   // Delete the request
   await sb.from('account_requests').delete().eq('id', reqId);
