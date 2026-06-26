@@ -202,9 +202,9 @@ function renderQuiltList(quilts, error) {
   `).join('');
 
   wrap.querySelectorAll('.quilt-list-row').forEach(row => {
-    row.addEventListener('click',    () => setQuiltSelection(row.dataset.id));
+    row.addEventListener('click',    () => setQuiltSelection(row.dataset.id === selectedQuiltId ? null : row.dataset.id));
     row.addEventListener('keydown',  e => {
-      if (e.key === 'Enter' || e.key === ' ') setQuiltSelection(row.dataset.id);
+      if (e.key === 'Enter' || e.key === ' ') setQuiltSelection(row.dataset.id === selectedQuiltId ? null : row.dataset.id);
     });
   });
 
@@ -218,6 +218,10 @@ function setQuiltSelection(id) {
   const hasSelection = !!id;
   $('btn-quilt-modify').disabled = !hasSelection;
   $('btn-quilt-delete').disabled = !hasSelection;
+  if (!hasSelection) {
+    hide($('quilt-form-wrap'));
+    resetQuiltForm();
+  }
 }
 
 function highlightSelectedRow() {
