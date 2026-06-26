@@ -21,6 +21,7 @@ async function initBids() {
   } else {
     hide($('bid-panels-wrap'));
   }
+  startPolling();
 }
  
 // ── Search ────────────────────────────────────────────────────
@@ -351,7 +352,50 @@ async function checkAndUpdateMatch(rec) {
   }
 }
  
-// ── Real-time subscription ────────────────────────────────────
+// ── Real-time subscription + polling fallback ─────────────────
+// iOS Safari can drop WebSocket connections; polling ensures
+// changes are always picked up even when the subscription fails.
+ 
+let pollTimer = null;
+ 
+async function pollBidRecord() {
+  if (!$('screen-bids').classList.contains('active')) return;
+  if (!selectedBidQuiltId) return;
+ 
+  const { data } = await sb.from('bid_records')
+    .select('*').eq('quilt_id', selectedBidQuiltId).maybeSingle();
+ 
+  // Only re-render if something actually changed
+  const prev = JSON.stringify(currentBidRecord);
+  const next  = JSON.stringify(data);
+  if (prev !== next) {
+    currentBidRecord = data;
+    await loadBidQuiltList();
+    renderBidPanels(data);
+    highlightBidRow();
+  }
+}
+ 
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(pollBidRecord, 3000);
+}
+ 
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+ 
+// Start/stop polling with screen visibility
+const _origInitBids = initBids;
+// Polling starts when bids screen becomes active (called from app.js showScreen)
+// We hook into document visibility to pause when app is backgrounded
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPolling();
+  } else if ($('screen-bids').classList.contains('active')) {
+    startPolling();
+  }
+});
  
 sb.channel('bid_records_changes')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'bid_records' }, async () => {
