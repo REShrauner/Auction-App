@@ -165,10 +165,13 @@ function renderBidPanels(record) {
   populateIfIdle('bid-b-amount', record?.user_b_bid);
   populateIfIdle('bid-b-bidder', record?.user_b_bidder_number);
  
-  // ── Mismatch indicators ───────────────────────────────────────
-  const bothSubmitted = record?.user_a_submitted_at && record?.user_b_submitted_at;
+  // ── Field color indicators ────────────────────────────────────
+  const bothHaveData =
+    record?.user_a_submitted_at && record?.user_b_submitted_at &&
+    record?.user_a_bid != null  && record?.user_b_bid != null  &&
+    record?.user_a_bidder_number != null && record?.user_b_bidder_number != null;
  
-  if (bothSubmitted && record?.mismatch) {
+  if (bothHaveData && !record?.is_finalized) {
     const amtMatch    = record.user_a_bid           === record.user_b_bid;
     const bidderMatch = record.user_a_bidder_number === record.user_b_bidder_number;
  
@@ -181,13 +184,12 @@ function renderBidPanels(record) {
       setFieldColor($('bid-b-bidder'), bidderMatch);
     }
  
-    $('bid-status-banner').innerHTML = `
-      <div class="alert alert-needs" style="margin-top:8px">
-        Data Mismatch — please re-check your entries.
-      </div>`;
-  } else if (bothSubmitted && !record?.mismatch) {
-    // Both submitted and matching — shouldn't be here but clear colors
-    clearFieldColors();
+    if (!amtMatch || !bidderMatch) {
+      $('bid-status-banner').innerHTML = `
+        <div class="alert alert-needs" style="margin-top:8px">
+          Data Mismatch — please re-check your entries.
+        </div>`;
+    }
   } else {
     clearFieldColors();
   }
@@ -289,33 +291,45 @@ async function saveEntry(person) {
  
   if (error) { setError(errorEl, 'Could not save: ' + error.message); return; }
  
-  // Fetch latest record
+  // Always fetch latest and re-run the full cross-check
   const { data: rec } = await sb.from('bid_records')
     .select('*').eq('quilt_id', selectedBidQuiltId).single();
  
   currentBidRecord = rec;
- 
-  // Check for match only when both sides have data
-  if (rec?.user_a_submitted_at && rec?.user_b_submitted_at) {
-    await checkAndFinalizeIfMatch(rec);
-  }
+  await checkAndUpdateMatch(rec);
  
   await loadBidQuiltList();
   highlightBidRow();
  
-  // Re-render panels but don't overwrite actively-typed fields
   const { data: latest } = await sb.from('bid_records')
     .select('*').eq('quilt_id', selectedBidQuiltId).maybeSingle();
   currentBidRecord = latest;
   renderBidPanels(latest);
 }
  
-// ── Auto-finalize on match ────────────────────────────────────
+// ── Cross-check and finalize ──────────────────────────────────
  
-async function checkAndFinalizeIfMatch(rec) {
-  const match =
-    rec.user_a_bid           === rec.user_b_bid &&
-    rec.user_a_bidder_number === rec.user_b_bidder_number;
+async function checkAndUpdateMatch(rec) {
+  // Need both sides to have data before comparing
+  const bothHaveData =
+    rec.user_a_submitted_at && rec.user_b_submitted_at &&
+    rec.user_a_bid != null  && rec.user_b_bid != null  &&
+    rec.user_a_bidder_number != null && rec.user_b_bidder_number != null;
+ 
+  if (!bothHaveData) {
+    // If previously finalized or mismatched, clear those flags
+    if (rec.is_finalized || rec.mismatch) {
+      await sb.from('bid_records').update({
+        mismatch: false, is_finalized: false,
+        resolved_bid: null, resolved_bidder_number: null, resolved_bidder_id: null,
+      }).eq('id', rec.id);
+    }
+    return;
+  }
+ 
+  const amtMatch    = rec.user_a_bid           === rec.user_b_bid;
+  const bidderMatch = rec.user_a_bidder_number === rec.user_b_bidder_number;
+  const match       = amtMatch && bidderMatch;
  
   if (match) {
     const { data: bidderRow } = await sb.from('bidders')
@@ -329,7 +343,11 @@ async function checkAndFinalizeIfMatch(rec) {
       is_finalized:           true,
     }).eq('id', rec.id);
   } else {
-    await sb.from('bid_records').update({ mismatch: true }).eq('id', rec.id);
+    await sb.from('bid_records').update({
+      mismatch:     true,
+      is_finalized: false,
+      resolved_bid: null, resolved_bidder_number: null, resolved_bidder_id: null,
+    }).eq('id', rec.id);
   }
 }
  
