@@ -90,6 +90,7 @@ function renderBidQuiltList(term) {
         selectedBidQuiltId = null;
         highlightBidRow();
         hide($('bid-panels-wrap'));
+        $('btn-bid-modify').disabled = true;
         stopPolling();
       } else {
         selectBidQuilt(row.dataset.id);
@@ -101,6 +102,7 @@ function renderBidQuiltList(term) {
           selectedBidQuiltId = null;
           highlightBidRow();
           hide($('bid-panels-wrap'));
+          $('btn-bid-modify').disabled = true;
           stopPolling();
         } else {
           selectBidQuilt(row.dataset.id);
@@ -122,17 +124,50 @@ function highlightBidRow() {
 
 async function selectBidQuilt(id) {
   selectedBidQuiltId = id;
-
-  // Clear fields and colors when switching quilts
   clearAllFields();
   clearFieldColors();
   setError($('bid-a-error'), '');
   setError($('bid-b-error'), '');
   $('bid-status-banner').innerHTML = '';
-
+  $('btn-bid-modify').disabled = false;
   highlightBidRow();
   await loadBidRecord(id);
+  startPolling();
 }
+
+// ── Modify Bid button ─────────────────────────────────────────
+
+$('btn-bid-modify').addEventListener('click', async () => {
+  if (!selectedBidQuiltId || !currentBidRecord) return;
+
+  const ok = await confirmDelete(
+    'Reset this bid so it can be re-entered by both documentarians?'
+  );
+  if (!ok) return;
+
+  // Clear finalized/mismatch state, keep quilt association
+  await sb.from('bid_records').update({
+    user_a_bid:            null,
+    user_a_bidder_number:  null,
+    user_a_submitted_at:   null,
+    user_b_bid:            null,
+    user_b_bidder_number:  null,
+    user_b_submitted_at:   null,
+    mismatch:              false,
+    is_finalized:          false,
+    resolved_bid:          null,
+    resolved_bidder_number: null,
+    resolved_bidder_id:    null,
+  }).eq('id', currentBidRecord.id);
+
+  clearAllFields();
+  clearFieldColors();
+  $('bid-status-banner').innerHTML = '';
+
+  await loadBidRecord(selectedBidQuiltId);
+  await loadBidQuiltList();
+  highlightBidRow();
+});
 
 // ── Apply panel visibility based on role ──────────────────────
 

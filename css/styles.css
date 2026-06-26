@@ -923,6 +923,15 @@ tr:hover td { background: var(--glass); }
 .admin-tab-panel  { display: block; }
 .admin-tab-panel.hidden { display: none !important; }
 
+/* ── Bid action button ───────────────────────────────────────── */
+#btn-bid-modify {
+  background: #555 !important;
+  border-color: #333 !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+#btn-bid-modify:hover:not(:disabled) { background: #666 !important; }
+
 /* ── Bid quilt list ──────────────────────────────────────────── */
 #bid-quilt-list {
   overflow-y: auto;
