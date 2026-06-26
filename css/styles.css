@@ -923,6 +923,28 @@ tr:hover td { background: var(--glass); }
 .admin-tab-panel  { display: block; }
 .admin-tab-panel.hidden { display: none !important; }
 
+/* ── Bid quilt list ──────────────────────────────────────────── */
+#bid-quilt-list {
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+  min-height: 80px;
+  max-height: clamp(200px, 50vh, 480px);
+  background: #96C5BE;
+}
+
+.quilt-list-row.bid-finalized {
+  background: #D4EDDA;
+  color: #1A5C2A;
+  border-color: #A8D5B5;
+}
+.quilt-list-row.bid-finalized.selected {
+  background: #2C8A7C;
+  border-color: #1F6058;
+  color: #fff;
+}
+
 /* ── Search bar ──────────────────────────────────────────────── */
 .quilt-search-wrap {
   margin-bottom: 8px;

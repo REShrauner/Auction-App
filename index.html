@@ -223,69 +223,72 @@
     </div>
 
     <!-- ── Bid Documentation ─────────────────────────────────── -->
+    <!-- ── Bids ──────────────────────────────────────────────── -->
     <div id="screen-bids" class="screen">
       <h2 class="page-heading">Bid Documentation</h2>
 
-      <div class="card mb-16">
-        <div class="form-group">
-          <label for="bid-quilt-select">Select quilt</label>
-          <select id="bid-quilt-select">
-            <option value="">— choose a quilt —</option>
-          </select>
-        </div>
+      <!-- Search -->
+      <div class="quilt-search-wrap">
+        <input type="search" id="bid-quilt-search" placeholder="Search by number or name…" autocomplete="off">
       </div>
 
-      <div id="bid-status-banner"></div>
+      <!-- Scrollable quilt list -->
+      <div id="bid-quilt-list"></div>
 
+      <!-- Bid entry (hidden until quilt selected) -->
       <div id="bid-panels-wrap" class="hidden">
-        <div class="bid-panels">
-          <!-- Panel A -->
-          <div class="bid-panel" id="bid-panel-a">
-            <div class="bid-panel-label">Entry — Person A</div>
-            <div id="bid-a-submitted-view" class="hidden">
-              <div class="text-muted mb-8">Submitted</div>
-              <div id="bid-a-summary"></div>
-            </div>
-            <div id="bid-a-entry-form">
-              <div class="form-group mb-16">
-                <label for="bid-a-amount">Winning bid amount ($) *</label>
-                <input type="number" id="bid-a-amount" min="0" step="0.01">
-              </div>
-              <div class="form-group mb-16">
-                <label for="bid-a-bidder">Winning bidder number *</label>
-                <input type="number" id="bid-a-bidder" min="1" step="1">
-              </div>
-              <div id="bid-a-error" class="form-error hidden"></div>
-              <button id="btn-submit-a" class="btn btn-primary">Submit Entry A</button>
-            </div>
-          </div>
 
-          <!-- Panel B -->
-          <div class="bid-panel" id="bid-panel-b">
-            <div class="bid-panel-label">Entry — Person B</div>
-            <div id="bid-b-submitted-view" class="hidden">
-              <div class="text-muted mb-8">Submitted</div>
-              <div id="bid-b-summary"></div>
+        <!-- Selected quilt heading -->
+        <div style="padding:12px 16px;background:#96C5BE;border-radius:var(--r-md) var(--r-md) 0 0;font-size:var(--fs-lg);font-weight:700" id="bid-selected-heading"></div>
+
+        <div id="bid-status-banner"></div>
+
+        <!-- Panel A — Documentarian 1 and admin only -->
+        <div class="bid-panel form-card" id="bid-panel-a" style="margin-top:0;border-radius:0">
+          <div class="bid-panel-label">Entry — Documentarian 1</div>
+          <div id="bid-a-submitted-view" class="hidden">
+            <div class="text-muted mb-8">Submitted</div>
+            <div id="bid-a-summary"></div>
+          </div>
+          <div id="bid-a-entry-form">
+            <div class="form-group mb-16">
+              <label for="bid-a-amount">Winning bid amount ($) *</label>
+              <input type="number" id="bid-a-amount" min="0" step="0.01">
             </div>
-            <div id="bid-b-entry-form">
-              <div class="form-group mb-16">
-                <label for="bid-b-amount">Winning bid amount ($) *</label>
-                <input type="number" id="bid-b-amount" min="0" step="0.01">
-              </div>
-              <div class="form-group mb-16">
-                <label for="bid-b-bidder">Winning bidder number *</label>
-                <input type="number" id="bid-b-bidder" min="1" step="1">
-              </div>
-              <div id="bid-b-error" class="form-error hidden"></div>
-              <button id="btn-submit-b" class="btn btn-primary">Submit Entry B</button>
+            <div class="form-group mb-16">
+              <label for="bid-a-bidder">Winning bidder number *</label>
+              <input type="number" id="bid-a-bidder" min="1" step="1">
             </div>
+            <div id="bid-a-error" class="form-error hidden"></div>
+            <button id="btn-submit-a" class="btn btn-primary">Submit Entry</button>
+          </div>
+        </div>
+
+        <!-- Panel B — Documentarian 2 and admin only -->
+        <div class="bid-panel form-card" id="bid-panel-b" style="margin-top:0;border-radius:0">
+          <div class="bid-panel-label">Entry — Documentarian 2</div>
+          <div id="bid-b-submitted-view" class="hidden">
+            <div class="text-muted mb-8">Submitted</div>
+            <div id="bid-b-summary"></div>
+          </div>
+          <div id="bid-b-entry-form">
+            <div class="form-group mb-16">
+              <label for="bid-b-amount">Winning bid amount ($) *</label>
+              <input type="number" id="bid-b-amount" min="0" step="0.01">
+            </div>
+            <div class="form-group mb-16">
+              <label for="bid-b-bidder">Winning bidder number *</label>
+              <input type="number" id="bid-b-bidder" min="1" step="1">
+            </div>
+            <div id="bid-b-error" class="form-error hidden"></div>
+            <button id="btn-submit-b" class="btn btn-primary">Submit Entry</button>
           </div>
         </div>
 
         <!-- Mismatch resolution -->
-        <div id="mismatch-panel" class="hidden mt-16">
+        <div id="mismatch-panel" class="hidden">
           <div class="alert alert-needs">
-            <strong>Mismatch detected.</strong> Entries A and B do not agree. Both persons must discuss and re-submit agreed values below.
+            <strong>Mismatch detected.</strong> Entries do not agree. Both documentarians must confirm the correct values below.
           </div>
           <div class="card">
             <div class="form-grid">
@@ -300,17 +303,13 @@
             </div>
             <div id="resolution-error" class="form-error hidden"></div>
             <div class="form-actions">
-              <button id="btn-resolve-a" class="btn btn-accent">Confirm (Person A)</button>
-              <button id="btn-resolve-b" class="btn btn-accent">Confirm (Person B)</button>
+              <button id="btn-resolve-a" class="btn btn-accent">Confirm (Doc 1)</button>
+              <button id="btn-resolve-b" class="btn btn-accent">Confirm (Doc 2)</button>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Recent bids -->
-      <hr class="hr">
-      <h3 class="page-heading" style="font-size:var(--fs-xl)">Recorded bids <small>most recent first</small></h3>
-      <div id="bid-recent-list"></div>
+      </div>
     </div>
 
     <!-- ── Checkout ──────────────────────────────────────────── -->

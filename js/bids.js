@@ -1,47 +1,122 @@
 // ── Two-person bid documentation ──────────────────────────────
 
-let selectedQuiltId   = null;
-let currentBidRecord  = null;
-let resolveAConfirmed = false;
-let resolveBConfirmed = false;
+let selectedBidQuiltId  = null;
+let currentBidRecord    = null;
+let resolveAConfirmed   = false;
+let resolveBConfirmed   = false;
+let allBidQuiltList     = [];  // [{quilt, record}]
 
-// ── Populate quilt select ─────────────────────────────────────
+// ── Role helpers ──────────────────────────────────────────────
 
-function populateBidQuiltSelect() {
-  const sel = $('bid-quilt-select');
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">— choose a quilt —</option>' +
-    (allQuilts || []).map(q =>
-      `<option value="${q.id}">${q.quilt_number} — ${esc(q.name)}</option>`
-    ).join('');
-  if (prev) sel.value = prev;
-}
+function isDoc1()  { return currentProfile?.roles?.includes('documentarian1') || currentProfile?.is_admin; }
+function isDoc2()  { return currentProfile?.roles?.includes('documentarian2') || currentProfile?.is_admin; }
 
 // ── Init bids screen ──────────────────────────────────────────
 
-function initBids() {
-  populateBidQuiltSelect();
-  loadRecentBids();
-  if (selectedQuiltId) {
-    $('bid-quilt-select').value = selectedQuiltId;
-    loadBidRecord(selectedQuiltId);
+async function initBids() {
+  await loadBidQuiltList();
+  applyPanelVisibility();
+
+  // Re-select previously chosen quilt
+  if (selectedBidQuiltId) {
+    await loadBidRecord(selectedBidQuiltId);
+    highlightBidRow();
   } else {
     hide($('bid-panels-wrap'));
-    hide($('mismatch-panel'));
-    $('bid-status-banner').innerHTML = '';
   }
 }
 
-$('bid-quilt-select').addEventListener('change', () => {
-  selectedQuiltId = $('bid-quilt-select').value || null;
-  if (selectedQuiltId) {
-    loadBidRecord(selectedQuiltId);
-  } else {
-    hide($('bid-panels-wrap'));
-    hide($('mismatch-panel'));
-    $('bid-status-banner').innerHTML = '';
-  }
+// ── Search ────────────────────────────────────────────────────
+
+$('bid-quilt-search').addEventListener('input', () => {
+  const term = $('bid-quilt-search').value.trim().toLowerCase();
+  renderBidQuiltList(term);
 });
+
+// ── Load quilt list with bid status ──────────────────────────
+
+async function loadBidQuiltList() {
+  const { data: quilts } = await sb
+    .from('quilts')
+    .select('*')
+    .order('quilt_number', { ascending: true });
+
+  const { data: records } = await sb
+    .from('bid_records')
+    .select('quilt_id, is_finalized, mismatch, resolved_bid, resolved_bidder_number');
+
+  const recordMap = {};
+  (records || []).forEach(r => { recordMap[r.quilt_id] = r; });
+
+  allBidQuiltList = (quilts || []).map(q => ({
+    quilt:  q,
+    record: recordMap[q.id] || null,
+  }));
+
+  renderBidQuiltList('');
+}
+
+function renderBidQuiltList(term) {
+  const wrap = $('bid-quilt-list');
+  const filtered = term
+    ? allBidQuiltList.filter(({ quilt: q }) =>
+        String(q.quilt_number).includes(term) ||
+        q.name.toLowerCase().includes(term))
+    : allBidQuiltList;
+
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="empty-state">No quilts found.</div>';
+    return;
+  }
+
+  wrap.innerHTML = filtered.map(({ quilt: q, record: r }) => {
+    const finalized = r?.is_finalized;
+    const mismatch  = r?.mismatch && !finalized;
+    const partialA  = r && !r.is_finalized && !r.mismatch;
+
+    let badge = '';
+    if (finalized) badge = ' <span style="color:#2C8A7C;font-weight:700">✓</span>';
+    else if (mismatch) badge = ' <span style="color:#B83A3A;font-weight:700">!</span>';
+    else if (partialA) badge = ' <span style="color:#888">…</span>';
+
+    return `
+      <div class="quilt-list-row${finalized ? ' bid-finalized' : ''}" 
+           data-id="${q.id}" tabindex="0" role="option" aria-selected="false">
+        <span class="quilt-list-num">${q.quilt_number}</span>
+        <span class="quilt-list-name">${esc(q.name)}${badge}</span>
+      </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.quilt-list-row').forEach(row => {
+    row.addEventListener('click',   () => selectBidQuilt(row.dataset.id));
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') selectBidQuilt(row.dataset.id);
+    });
+  });
+
+  highlightBidRow();
+}
+
+function highlightBidRow() {
+  $('bid-quilt-list').querySelectorAll('.quilt-list-row').forEach(row => {
+    const sel = row.dataset.id === selectedBidQuiltId;
+    row.classList.toggle('selected', sel);
+    row.setAttribute('aria-selected', sel);
+  });
+}
+
+async function selectBidQuilt(id) {
+  selectedBidQuiltId = id;
+  highlightBidRow();
+  await loadBidRecord(id);
+}
+
+// ── Apply panel visibility based on role ──────────────────────
+
+function applyPanelVisibility() {
+  toggle($('bid-panel-a'), isDoc1());
+  toggle($('bid-panel-b'), isDoc2());
+}
 
 // ── Load / render a bid record ────────────────────────────────
 
@@ -50,37 +125,58 @@ async function loadBidRecord(quiltId) {
     .select('*').eq('quilt_id', quiltId).maybeSingle();
 
   currentBidRecord = data;
+
+  // Update heading
+  const entry = allBidQuiltList.find(e => e.quilt.id === quiltId);
+  if (entry) {
+    $('bid-selected-heading').textContent =
+      `Quilt #${entry.quilt.quilt_number} — ${entry.quilt.name}`;
+  }
+
+  show($('bid-panels-wrap'));
+  applyPanelVisibility();
   renderBidPanels(data);
+
+  // Refresh list to update status indicators
+  await loadBidQuiltList();
+  highlightBidRow();
 }
 
 function renderBidPanels(record) {
-  show($('bid-panels-wrap'));
   hide($('mismatch-panel'));
   $('bid-status-banner').innerHTML = '';
-
   resolveAConfirmed = false;
   resolveBConfirmed = false;
 
-  // Determine which panel is "mine" based on who submitted A
-  const iAmA = record?.user_a_id === currentUser?.id;
-  const iAmB = record?.user_b_id === currentUser?.id;
+  // ── Finalized ─────────────────────────────────────────────────
+  if (record?.is_finalized) {
+    $('bid-status-banner').innerHTML = `
+      <div class="alert alert-ready" style="margin-top:8px">
+        Bid recorded: <strong>${fmtMoney(record.resolved_bid)}</strong>
+        — Bidder #<strong>${record.resolved_bidder_number}</strong>
+      </div>`;
+    hide($('bid-panel-a'));
+    hide($('bid-panel-b'));
+    return;
+  }
+
+  // Re-apply role visibility since finalized hides both
+  applyPanelVisibility();
 
   // ── Panel A ───────────────────────────────────────────────────
   if (record?.user_a_submitted_at) {
-    // A is submitted — show summary
     show($('bid-a-submitted-view'));
     hide($('bid-a-entry-form'));
     $('bid-panel-a').classList.add('submitted');
     $('bid-a-summary').innerHTML = `
       <div class="text-accent fw-bold">${fmtMoney(record.user_a_bid)}</div>
-      <div class="text-muted">Bidder #${record.user_a_bidder_number}</div>
-    `;
+      <div class="text-muted">Bidder #${record.user_a_bidder_number}</div>`;
   } else {
     hide($('bid-a-submitted-view'));
     show($('bid-a-entry-form'));
-    $('bid-panel-a').classList.remove('submitted','mismatch');
-    $('bid-a-amount').value  = '';
-    $('bid-a-bidder').value  = '';
+    $('bid-panel-a').classList.remove('submitted', 'mismatch');
+    $('bid-a-amount').value = '';
+    $('bid-a-bidder').value = '';
     setError($('bid-a-error'), '');
   }
 
@@ -91,27 +187,14 @@ function renderBidPanels(record) {
     $('bid-panel-b').classList.add('submitted');
     $('bid-b-summary').innerHTML = `
       <div class="text-accent fw-bold">${fmtMoney(record.user_b_bid)}</div>
-      <div class="text-muted">Bidder #${record.user_b_bidder_number}</div>
-    `;
+      <div class="text-muted">Bidder #${record.user_b_bidder_number}</div>`;
   } else {
     hide($('bid-b-submitted-view'));
     show($('bid-b-entry-form'));
-    $('bid-panel-b').classList.remove('submitted','mismatch');
-    $('bid-b-amount').value  = '';
-    $('bid-b-bidder').value  = '';
+    $('bid-panel-b').classList.remove('submitted', 'mismatch');
+    $('bid-b-amount').value = '';
+    $('bid-b-bidder').value = '';
     setError($('bid-b-error'), '');
-  }
-
-  // ── Finalized ─────────────────────────────────────────────────
-  if (record?.is_finalized) {
-    const bidder = record.resolved_bidder_number || record.user_a_bidder_number;
-    const amount = record.resolved_bid           ?? record.user_a_bid;
-    $('bid-status-banner').innerHTML = `
-      <div class="alert alert-ready">
-        <span>Bid recorded: <strong>${fmtMoney(amount)}</strong> — Bidder #<strong>${bidder}</strong></span>
-      </div>`;
-    hide($('bid-panels-wrap'));
-    return;
   }
 
   // ── Mismatch ──────────────────────────────────────────────────
@@ -119,10 +202,11 @@ function renderBidPanels(record) {
     $('bid-panel-a').classList.add('mismatch');
     $('bid-panel-b').classList.add('mismatch');
     show($('mismatch-panel'));
-
-    // Pre-fill resolution fields if not yet set
-    if (!$('res-amount').value) $('res-amount').value = '';
-    if (!$('res-bidder').value) $('res-bidder').value = '';
+    $('res-amount').value = '';
+    $('res-bidder').value = '';
+    // Show only the relevant resolve button
+    toggle($('btn-resolve-a'), isDoc1());
+    toggle($('btn-resolve-b'), isDoc2());
   }
 }
 
@@ -141,7 +225,7 @@ $('btn-submit-a').addEventListener('click', async () => {
   $('btn-submit-a').disabled = true;
 
   const payload = {
-    quilt_id:             selectedQuiltId,
+    quilt_id:             selectedBidQuiltId,
     user_a_id:            currentUser.id,
     user_a_bid:           amount,
     user_a_bidder_number: bidder,
@@ -156,12 +240,10 @@ $('btn-submit-a').addEventListener('click', async () => {
   }
 
   $('btn-submit-a').disabled = false;
+  if (error) { setError($('bid-a-error'), 'Could not save: ' + error.message); return; }
 
-  if (error) { setError($('bid-a-error'), 'Could not save entry: ' + error.message); return; }
-
-  await loadBidRecord(selectedQuiltId);
+  await loadBidRecord(selectedBidQuiltId);
   await checkAndFinalizeIfMatch();
-  loadRecentBids();
 });
 
 // ── Submit Panel B ────────────────────────────────────────────
@@ -175,9 +257,8 @@ $('btn-submit-b').addEventListener('click', async () => {
     setError($('bid-b-error'), 'Enter a valid amount and bidder number.');
     return;
   }
-
   if (!currentBidRecord) {
-    setError($('bid-b-error'), 'Person A must submit first.');
+    setError($('bid-b-error'), 'Documentarian 1 must submit first.');
     return;
   }
 
@@ -191,19 +272,17 @@ $('btn-submit-b').addEventListener('click', async () => {
   }).eq('id', currentBidRecord.id);
 
   $('btn-submit-b').disabled = false;
+  if (error) { setError($('bid-b-error'), 'Could not save: ' + error.message); return; }
 
-  if (error) { setError($('bid-b-error'), 'Could not save entry: ' + error.message); return; }
-
-  await loadBidRecord(selectedQuiltId);
+  await loadBidRecord(selectedBidQuiltId);
   await checkAndFinalizeIfMatch();
-  loadRecentBids();
 });
 
 // ── Auto-finalize on match ────────────────────────────────────
 
 async function checkAndFinalizeIfMatch() {
   const { data: rec } = await sb.from('bid_records')
-    .select('*').eq('quilt_id', selectedQuiltId).single();
+    .select('*').eq('quilt_id', selectedBidQuiltId).single();
 
   if (!rec || !rec.user_a_submitted_at || !rec.user_b_submitted_at) return;
 
@@ -212,23 +291,21 @@ async function checkAndFinalizeIfMatch() {
     rec.user_a_bidder_number === rec.user_b_bidder_number;
 
   if (match) {
-    // Look up bidder uuid
     const { data: bidderRow } = await sb.from('bidders')
       .select('id').eq('bidder_number', rec.user_a_bidder_number).maybeSingle();
 
     await sb.from('bid_records').update({
-      mismatch:                false,
-      resolved_bid:            rec.user_a_bid,
-      resolved_bidder_number:  rec.user_a_bidder_number,
-      resolved_bidder_id:      bidderRow?.id || null,
-      is_finalized:            true,
+      mismatch:               false,
+      resolved_bid:           rec.user_a_bid,
+      resolved_bidder_number: rec.user_a_bidder_number,
+      resolved_bidder_id:     bidderRow?.id || null,
+      is_finalized:           true,
     }).eq('id', rec.id);
   } else {
     await sb.from('bid_records').update({ mismatch: true }).eq('id', rec.id);
   }
 
-  await loadBidRecord(selectedQuiltId);
-  loadRecentBids();
+  await loadBidRecord(selectedBidQuiltId);
 }
 
 // ── Mismatch resolution ───────────────────────────────────────
@@ -241,17 +318,19 @@ async function handleResolveConfirm(person) {
   const bidder = parseInt($('res-bidder').value);
 
   setError($('resolution-error'), '');
-
   if (!amount || amount <= 0 || !bidder || bidder < 1) {
     setError($('resolution-error'), 'Enter valid agreed amount and bidder number.');
     return;
   }
 
-  if (person === 'A') { resolveAConfirmed = true; $('btn-resolve-a').classList.add('hidden'); }
-  if (person === 'B') { resolveBConfirmed = true; $('btn-resolve-b').classList.add('hidden'); }
+  if (person === 'A') { resolveAConfirmed = true; hide($('btn-resolve-a')); }
+  if (person === 'B') { resolveBConfirmed = true; hide($('btn-resolve-b')); }
 
-  if (!resolveAConfirmed || !resolveBConfirmed) {
-    $('resolution-error').textContent = 'Waiting for the other person to confirm…';
+  const needsA = isDoc1() && !resolveAConfirmed;
+  const needsB = isDoc2() && !resolveBConfirmed;
+
+  if (needsA || needsB) {
+    $('resolution-error').textContent = 'Waiting for the other documentarian to confirm…';
     show($('resolution-error'));
     return;
   }
@@ -268,49 +347,20 @@ async function handleResolveConfirm(person) {
     is_finalized:           true,
   }).eq('id', currentBidRecord.id);
 
-  await loadBidRecord(selectedQuiltId);
-  loadRecentBids();
+  await loadBidRecord(selectedBidQuiltId);
 }
 
-// ── Recent bids list ──────────────────────────────────────────
-
-async function loadRecentBids() {
-  const { data } = await sb.from('bid_records')
-    .select(`*, quilts(quilt_number, name)`)
-    .eq('is_finalized', true)
-    .order('updated_at', { ascending: false })
-    .limit(20);
-
-  const wrap = $('bid-recent-list');
-  if (!data || data.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">No finalized bids yet.</div>';
-    return;
-  }
-
-  wrap.innerHTML = data.map(r => `
-    <div class="card">
-      <div class="flex-center gap-8">
-        <div>
-          <div class="card-meta">Quilt #${r.quilts?.quilt_number}</div>
-          <div class="card-title">${esc(r.quilts?.name)}</div>
-        </div>
-        <div style="margin-left:auto;text-align:right">
-          <div class="text-accent fw-bold">${fmtMoney(r.resolved_bid)}</div>
-          <div class="text-muted">Bidder #${r.resolved_bidder_number}</div>
-        </div>
-        <span class="badge badge-ready">Final</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ── Real-time subscription (refresh bids screen when open) ────
+// ── Real-time subscription ────────────────────────────────────
 
 sb.channel('bid_records_changes')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'bid_records' }, () => {
     if ($('screen-bids').classList.contains('active')) {
-      if (selectedQuiltId) loadBidRecord(selectedQuiltId);
-      loadRecentBids();
+      if (selectedBidQuiltId) loadBidRecord(selectedBidQuiltId);
+      else loadBidQuiltList();
     }
   })
   .subscribe();
+
+// ── Keep populateBidQuiltSelect for checkout compatibility ─────
+
+function populateBidQuiltSelect() { /* no-op — replaced by bid-quilt-list */ }
