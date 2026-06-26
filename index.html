@@ -244,69 +244,35 @@
         <div id="bid-status-banner"></div>
 
         <!-- Panel A — Documentarian 1 and admin only -->
-        <div class="bid-panel form-card" id="bid-panel-a" style="margin-top:0;border-radius:0">
-          <div class="bid-panel-label">Entry — Documentarian 1</div>
-          <div id="bid-a-submitted-view" class="hidden">
-            <div class="text-muted mb-8">Submitted</div>
-            <div id="bid-a-summary"></div>
-          </div>
-          <div id="bid-a-entry-form">
-            <div class="form-group mb-16">
-              <label for="bid-a-amount">Winning bid amount ($) *</label>
-              <input type="number" id="bid-a-amount" min="0" step="0.01">
+        <div class="form-card" id="bid-panel-a" style="margin-top:0;border-radius:0">
+          <div class="bid-panel-label">Documentarian 1</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="bid-a-amount">Winning bid amount ($)</label>
+              <input type="number" id="bid-a-amount" min="0" step="0.01" placeholder="0.00">
             </div>
-            <div class="form-group mb-16">
-              <label for="bid-a-bidder">Winning bidder number *</label>
+            <div class="form-group">
+              <label for="bid-a-bidder">Winning bidder number</label>
               <input type="number" id="bid-a-bidder" min="1" step="1">
             </div>
-            <div id="bid-a-error" class="form-error hidden"></div>
-            <button id="btn-submit-a" class="btn btn-primary">Submit Entry</button>
           </div>
+          <div id="bid-a-error" class="form-error hidden"></div>
         </div>
 
         <!-- Panel B — Documentarian 2 and admin only -->
-        <div class="bid-panel form-card" id="bid-panel-b" style="margin-top:0;border-radius:0">
-          <div class="bid-panel-label">Entry — Documentarian 2</div>
-          <div id="bid-b-submitted-view" class="hidden">
-            <div class="text-muted mb-8">Submitted</div>
-            <div id="bid-b-summary"></div>
-          </div>
-          <div id="bid-b-entry-form">
-            <div class="form-group mb-16">
-              <label for="bid-b-amount">Winning bid amount ($) *</label>
-              <input type="number" id="bid-b-amount" min="0" step="0.01">
+        <div class="form-card" id="bid-panel-b" style="margin-top:0;border-radius:0">
+          <div class="bid-panel-label">Documentarian 2</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="bid-b-amount">Winning bid amount ($)</label>
+              <input type="number" id="bid-b-amount" min="0" step="0.01" placeholder="0.00">
             </div>
-            <div class="form-group mb-16">
-              <label for="bid-b-bidder">Winning bidder number *</label>
+            <div class="form-group">
+              <label for="bid-b-bidder">Winning bidder number</label>
               <input type="number" id="bid-b-bidder" min="1" step="1">
             </div>
-            <div id="bid-b-error" class="form-error hidden"></div>
-            <button id="btn-submit-b" class="btn btn-primary">Submit Entry</button>
           </div>
-        </div>
-
-        <!-- Mismatch resolution -->
-        <div id="mismatch-panel" class="hidden">
-          <div class="alert alert-needs">
-            <strong>Mismatch detected.</strong> Entries do not agree. Both documentarians must confirm the correct values below.
-          </div>
-          <div class="card">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="res-amount">Agreed winning bid ($) *</label>
-                <input type="number" id="res-amount" min="0" step="0.01">
-              </div>
-              <div class="form-group">
-                <label for="res-bidder">Agreed bidder number *</label>
-                <input type="number" id="res-bidder" min="1" step="1">
-              </div>
-            </div>
-            <div id="resolution-error" class="form-error hidden"></div>
-            <div class="form-actions">
-              <button id="btn-resolve-a" class="btn btn-accent">Confirm (Doc 1)</button>
-              <button id="btn-resolve-b" class="btn btn-accent">Confirm (Doc 2)</button>
-            </div>
-          </div>
+          <div id="bid-b-error" class="form-error hidden"></div>
         </div>
 
       </div>
