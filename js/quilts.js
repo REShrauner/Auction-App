@@ -92,12 +92,25 @@ async function saveQuilt() {
   const width   = parseFloat($('qf-width').value);
   const height  = parseFloat($('qf-height').value);
   const pitch   = $('qf-pitch').value.trim();
+  const newNum  = parseInt($('qf-number').value.trim());
 
   setError($('quilt-form-error'), '');
 
   if (!name || !piecer || !quilter || !width || !height) {
     setError($('quilt-form-error'), 'Name, piecer, quilter, width, and height are required.');
     return;
+  }
+
+  // Validate new quilt number if being changed
+  if (editingQuiltId && newNum) {
+    const q = allQuilts.find(x => x.id === editingQuiltId);
+    if (newNum !== q.quilt_number) {
+      const conflict = allQuilts.find(x => x.quilt_number === newNum && x.id !== editingQuiltId);
+      if (conflict) {
+        setError($('quilt-form-error'), `Quilt #${newNum} already exists.`);
+        return;
+      }
+    }
   }
 
   $('btn-save-quilt').disabled = true;
@@ -121,6 +134,12 @@ async function saveQuilt() {
   const payload = { name, piecer_name: piecer, quilter_name: quilter,
     width_in: width, height_in: height, sales_pitch: pitch || null };
   if (photoUrl) payload.photo_url = photoUrl;
+
+  // Include quilt number in update if it changed
+  if (editingQuiltId && newNum) {
+    const q = allQuilts.find(x => x.id === editingQuiltId);
+    if (newNum !== q.quilt_number) payload.quilt_number = newNum;
+  }
 
   let error;
   if (editingQuiltId) {
@@ -151,11 +170,12 @@ $('btn-cancel-quilt-edit').addEventListener('click', () => {
 
 function resetQuiltForm() {
   editingQuiltId = null;
-  ['qf-name','qf-piecer','qf-quilter','qf-width','qf-height','qf-pitch']
+  ['qf-name','qf-piecer','qf-quilter','qf-width','qf-height','qf-pitch','qf-number']
     .forEach(id => { $(id).value = ''; });
   clearPhotoPreview();
   $('btn-save-quilt').textContent = 'Save quilt';
   hide($('btn-show-qr'));
+  hide($('qf-number-wrap'));
   setError($('quilt-form-error'), '');
 }
 
@@ -208,7 +228,6 @@ function renderQuiltList(quilts, error) {
     });
   });
 
-  // Re-apply selection highlight if a quilt was previously selected
   if (selectedQuiltId) highlightSelectedRow();
 }
 
@@ -245,6 +264,7 @@ function startEditQuilt(id) {
   $('qf-width').value   = q.width_in;
   $('qf-height').value  = q.height_in;
   $('qf-pitch').value   = q.sales_pitch || '';
+  $('qf-number').value  = q.quilt_number;
 
   if (q.photo_url) {
     photoPreview.src = q.photo_url;
@@ -257,6 +277,7 @@ function startEditQuilt(id) {
   $('btn-save-quilt').textContent = 'Save changes';
   $('quilt-form-title').textContent = 'Modify Quilt';
   show($('btn-show-qr'));
+  show($('qf-number-wrap'));
   show($('quilt-form-wrap'));
   $('quilt-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -272,5 +293,12 @@ async function deleteQuilt(id, name) {
     resetQuiltForm();
   }
   setQuiltSelection(null);
+
+  // If no quilts remain, reset the sequence to 1
+  const { count } = await sb.from('quilts').select('*', { count: 'exact', head: true });
+  if (count === 0) {
+    await sb.rpc('reset_quilt_number_sequence');
+  }
+
   loadQuilts();
 }
