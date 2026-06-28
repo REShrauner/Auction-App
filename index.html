@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Quilt Auction App — bid documentation, checkout, and reports">
   <title>Quilt Auction</title>
-
+ 
   <!-- Pre-paint theme: apply saved mode/theme before first render to avoid flash -->
   <script>
     (function() {
@@ -15,21 +15,21 @@
       document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
-
+ 
   <link rel="stylesheet" href="css/styles.css">
-
+ 
   <!-- QR code generation -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-
+  <script src="js/qrcode.min.js"></script>
+ 
   <!-- jsPDF for PDF reports -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-
+ 
   <!-- Supabase client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
+ 
   <!-- ── Navigation ─────────────────────────────────────────── -->
   <nav id="app-nav" class="hidden">
     <span class="nav-title">Quilt Auction</span>
@@ -42,10 +42,10 @@
     <span id="nav-user-info"></span>
     <button id="nav-logout">Sign out</button>
   </nav>
-
+ 
   <!-- ── App content ────────────────────────────────────────── -->
   <main id="app-main">
-
+ 
     <!-- ── Login / Account Request ──────────────────────────── -->
     <div id="screen-login" class="screen active">
       <div class="login-box">
@@ -53,12 +53,12 @@
           <h1>Quilt Auction</h1>
           <p>Volunteer management system</p>
         </div>
-
+ 
         <div class="login-tabs">
           <button class="login-tab active" data-tab="login">Sign in</button>
           <button class="login-tab" data-tab="request">Request access</button>
         </div>
-
+ 
         <!-- Sign-in form -->
         <div id="login-form-panel">
           <div class="form-group mb-16">
@@ -72,7 +72,7 @@
           <div id="login-error" class="form-error hidden"></div>
           <button id="btn-login" class="btn btn-primary" style="width:100%">Sign in</button>
         </div>
-
+ 
         <!-- Account request form -->
         <div id="request-form-panel" class="hidden">
           <div class="alert alert-accent mb-16">
@@ -97,26 +97,26 @@
         </div>
       </div>
     </div>
-
+ 
     <!-- ── Quilts ────────────────────────────────────────────── -->
     <div id="screen-quilts" class="screen">
       <h2 class="page-heading">Quilts</h2>
-
+ 
       <!-- Search -->
       <div class="quilt-search-wrap">
         <input type="search" id="quilt-search" placeholder="Search by number or name…" autocomplete="off">
       </div>
-
+ 
       <!-- Scrollable quilt list -->
       <div id="quilt-list"></div>
-
+ 
       <!-- Action buttons -->
       <div class="quilt-list-actions">
         <button id="btn-quilt-add"    class="btn btn-primary">Add Quilt</button>
         <button id="btn-quilt-modify" class="btn btn-secondary" disabled>Modify Quilt</button>
         <button id="btn-quilt-delete" class="btn btn-danger"    disabled>Delete Quilt</button>
       </div>
-
+ 
       <!-- Entry / edit form (hidden until Add or Modify) -->
       <div class="form-card hidden" id="quilt-form-wrap">
         <h3 class="page-heading" style="font-size:var(--fs-xl)" id="quilt-form-title">Add Quilt</h3>
@@ -165,26 +165,26 @@
         </div>
       </div>
     </div>
-
+ 
     <!-- ── Bidders ───────────────────────────────────────────── -->
     <div id="screen-bidders" class="screen">
       <h2 class="page-heading">Bidders</h2>
-
+ 
       <!-- Search -->
       <div class="quilt-search-wrap">
         <input type="search" id="bidder-search" placeholder="Search by number or name…" autocomplete="off">
       </div>
-
+ 
       <!-- Scrollable bidder list -->
       <div id="bidder-list"></div>
-
+ 
       <!-- Action buttons -->
       <div class="quilt-list-actions">
         <button id="btn-bidder-add"    class="btn btn-primary">Add Bidder</button>
         <button id="btn-bidder-modify" class="btn btn-secondary" disabled>Modify Bidder</button>
         <button id="btn-bidder-delete" class="btn btn-danger"    disabled>Delete Bidder</button>
       </div>
-
+ 
       <!-- Entry / edit form (hidden until Add or Modify) -->
       <div class="form-card hidden" id="bidder-form-wrap">
         <h3 class="page-heading" style="font-size:var(--fs-xl)" id="bidder-form-title">Add Bidder</h3>
@@ -221,33 +221,33 @@
         </div>
       </div>
     </div>
-
+ 
     <!-- ── Bid Documentation ─────────────────────────────────── -->
     <!-- ── Bids ──────────────────────────────────────────────── -->
     <div id="screen-bids" class="screen">
       <h2 class="page-heading">Bid Documentation</h2>
-
+ 
       <!-- Search -->
       <div class="quilt-search-wrap">
         <input type="search" id="bid-quilt-search" placeholder="Search by number or name…" autocomplete="off">
       </div>
-
+ 
       <!-- Scrollable quilt list -->
       <div id="bid-quilt-list"></div>
-
+ 
       <!-- Action buttons -->
       <div class="quilt-list-actions">
         <button id="btn-bid-modify" class="btn btn-secondary" disabled>Modify Bid</button>
       </div>
-
+ 
       <!-- Bid entry (hidden until quilt selected) -->
       <div id="bid-panels-wrap" class="hidden">
-
+ 
         <!-- Selected quilt heading -->
         <div style="padding:12px 16px;background:#96C5BE;border-radius:var(--r-md) var(--r-md) 0 0;font-size:var(--fs-lg);font-weight:700" id="bid-selected-heading"></div>
-
+ 
         <div id="bid-status-banner"></div>
-
+ 
         <!-- Panel A — Documentarian 1 and admin only -->
         <div class="form-card" id="bid-panel-a" style="margin-top:0;border-radius:0">
           <div class="bid-panel-label">Documentarian 1</div>
@@ -263,7 +263,7 @@
           </div>
           <div id="bid-a-error" class="form-error hidden"></div>
         </div>
-
+ 
         <!-- Panel B — Documentarian 2 and admin only -->
         <div class="form-card" id="bid-panel-b" style="margin-top:0;border-radius:0">
           <div class="bid-panel-label">Documentarian 2</div>
@@ -279,14 +279,14 @@
           </div>
           <div id="bid-b-error" class="form-error hidden"></div>
         </div>
-
+ 
       </div>
     </div>
-
+ 
     <!-- ── Checkout ──────────────────────────────────────────── -->
     <div id="screen-checkout" class="screen">
       <h2 class="page-heading">Checkout</h2>
-
+ 
       <!-- Step 1: Identify bidder -->
       <div id="checkout-step-1">
         <div class="card">
@@ -308,7 +308,7 @@
         </div>
         <div id="checkout-lookup-error" class="form-error hidden"></div>
       </div>
-
+ 
       <!-- Step 2: Payment + delivery -->
       <div id="checkout-step-2" class="hidden">
         <div class="card mb-16">
@@ -320,21 +320,21 @@
             </div>
             <button id="btn-checkout-back" class="btn btn-secondary btn-sm" style="margin-left:auto">← Back</button>
           </div>
-
+ 
           <h3 class="page-heading" style="font-size:var(--fs-xl)">Won quilts</h3>
           <div id="co-quilts-list" class="mb-16"></div>
-
+ 
           <div class="checkout-total">
             <span>Total due</span>
             <span class="amount" id="co-total-due">$0.00</span>
           </div>
         </div>
-
+ 
         <div class="card mb-16">
           <h3 class="page-heading" style="font-size:var(--fs-xl)">Payment</h3>
           <div id="co-payment-lines"></div>
           <button id="btn-add-payment-line" class="btn btn-secondary btn-sm mt-8">+ Add payment line</button>
-
+ 
           <div class="checkout-total mt-16">
             <span>Amount entered</span>
             <span class="amount" id="co-amount-remitted">$0.00</span>
@@ -342,13 +342,13 @@
           <div id="co-payment-mismatch" class="alert alert-needs hidden">
             Amount entered does not match total due. Please resolve before confirming.
           </div>
-
+ 
           <div class="form-actions mt-16">
             <button id="btn-confirm-checkout" class="btn btn-primary">Confirm checkout</button>
           </div>
           <div id="checkout-payment-error" class="form-error hidden"></div>
         </div>
-
+ 
         <!-- Step 3: Quilt delivery scan -->
         <div id="checkout-step-3" class="hidden">
           <div class="card">
@@ -369,11 +369,11 @@
         </div>
       </div>
     </div>
-
+ 
     <!-- ── Reports ───────────────────────────────────────────── -->
     <div id="screen-reports" class="screen">
       <h2 class="page-heading">Reports <small>Admin only</small></h2>
-
+ 
       <div class="card mb-16 no-print">
         <div class="flex gap-8 flex-wrap">
           <button class="btn btn-accent" data-report="bidder">Bidder Summary</button>
@@ -383,18 +383,18 @@
           <button class="btn btn-accent" data-report="nocard">Bidders Without Card</button>
         </div>
       </div>
-
+ 
       <div id="report-output"></div>
-
+ 
       <div id="report-actions" class="hidden no-print mt-16">
         <button id="btn-print-report" class="btn btn-primary">Print / Save PDF</button>
       </div>
     </div>
-
+ 
     <!-- ── Admin ─────────────────────────────────────────────── -->
     <div id="screen-admin" class="screen">
       <h2 class="page-heading">Admin</h2>
-
+ 
       <!-- Tab bar -->
       <div class="admin-tabs">
         <button class="admin-tab active" data-tab="accounts">Accounts</button>
@@ -402,21 +402,21 @@
         <button class="admin-tab" data-tab="appearance">Appearance</button>
         <button class="admin-tab" data-tab="reports">Reports</button>
       </div>
-
+ 
       <!-- ── Accounts tab ── -->
       <div class="admin-tab-panel active" id="admin-tab-accounts">
         <h3 class="page-heading" style="font-size:var(--fs-xl)">Pending account requests</h3>
         <div id="admin-requests-list"></div>
-
+ 
         <hr class="hr">
-
+ 
         <h3 class="page-heading" style="font-size:var(--fs-xl)">All accounts</h3>
         <div id="admin-users-list"></div>
       </div>
-
+ 
       <!-- ── Bidder Cards tab ── -->
       <div class="admin-tab-panel hidden" id="admin-tab-cards">
-
+ 
         <!-- Print cards -->
         <h3 class="page-heading" style="font-size:var(--fs-xl)">Print Cards</h3>
         <div class="card">
@@ -440,7 +440,7 @@
             </div>
           </div>
         </div>
-
+ 
         <!-- Delete range -->
         <h3 class="page-heading" style="font-size:var(--fs-xl);margin-top:20px">Delete Card Range</h3>
         <div class="card">
@@ -465,14 +465,14 @@
             </div>
           </div>
         </div>
-
+ 
         <!-- Clear unassigned -->
         <h3 class="page-heading" style="font-size:var(--fs-xl);margin-top:20px">Clear Unassigned</h3>
         <div class="card">
           <p class="text-muted mb-16">Remove all cards that have not yet been assigned to a bidder.</p>
           <button id="btn-clear-unassigned" class="btn btn-secondary">Clear Unassigned Cards</button>
         </div>
-
+ 
         <!-- Nuclear option -->
         <h3 class="page-heading" style="font-size:var(--fs-xl);margin-top:20px">Danger Zone</h3>
         <div class="card" style="border:2px solid #B83A3A">
@@ -490,7 +490,7 @@
           </div>
         </div>
       </div>
-
+ 
       <!-- ── Appearance tab ── -->
       <div class="admin-tab-panel hidden" id="admin-tab-appearance">
         <h3 class="page-heading" style="font-size:var(--fs-xl)">Appearance</h3>
@@ -516,7 +516,7 @@
           </div>
         </div>
       </div>
-
+ 
       <!-- ── Reports tab ── -->
       <div class="admin-tab-panel hidden" id="admin-tab-reports">
         <h3 class="page-heading" style="font-size:var(--fs-xl)">Reports</h3>
@@ -534,11 +534,11 @@
           <button id="btn-print-admin-report" class="btn btn-primary">Print / Save PDF</button>
         </div>
       </div>
-
+ 
     </div>
-
+ 
   </main>
-
+ 
   <!-- ── QR Modal (for viewing / printing a generated QR) ───── -->
   <div id="qr-modal" class="modal-backdrop hidden">
     <div class="modal">
@@ -553,7 +553,7 @@
       </div>
     </div>
   </div>
-
+ 
   <!-- ── QR Scanner modal ──────────────────────────────────── -->
   <div id="scanner-modal" class="modal-backdrop hidden">
     <div class="modal">
@@ -569,7 +569,7 @@
       </div>
     </div>
   </div>
-
+ 
   <!-- ── Confirm-delete modal ───────────────────────────────── -->
   <div id="confirm-modal" class="modal-backdrop hidden">
     <div class="modal">
@@ -581,7 +581,7 @@
       </div>
     </div>
   </div>
-
+ 
   <!-- ── Scripts ────────────────────────────────────────────── -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
   <script src="js/config.js"></script>
