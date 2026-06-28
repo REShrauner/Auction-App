@@ -1,13 +1,13 @@
 // ── Bidder entry, list, edit, delete ─────────────────────────
-
+ 
 let editingBidderId  = null;
 let selectedBidderId = null;
 let allBidders       = [];
 let scannedCardToken = null;
 let scannedCardNumber = null;
-
+ 
 // ── Search ────────────────────────────────────────────────────
-
+ 
 $('bidder-search').addEventListener('input', () => {
   const term = $('bidder-search').value.trim().toLowerCase();
   const filtered = term
@@ -17,29 +17,29 @@ $('bidder-search').addEventListener('input', () => {
     : allBidders;
   renderBidderList(filtered, null);
 });
-
+ 
 // ── List action buttons ───────────────────────────────────────
-
+ 
 $('btn-bidder-add').addEventListener('click', () => {
   resetBidderForm();
   $('bidder-form-title').textContent = 'Add Bidder';
   show($('bidder-form-wrap'));
   $('bidder-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
-
+ 
 $('btn-bidder-modify').addEventListener('click', () => {
   if (!selectedBidderId) return;
   startEditBidder(selectedBidderId);
 });
-
+ 
 $('btn-bidder-delete').addEventListener('click', async () => {
   if (!selectedBidderId) return;
   const b = allBidders.find(x => x.id === selectedBidderId);
   if (b) await deleteBidder(b.id, b.name);
 });
-
+ 
 // ── Scan card button ──────────────────────────────────────────
-
+ 
 $('btn-scan-card').addEventListener('click', () => openScannerModal());
 $('btn-scan-close').addEventListener('click', () => closeScannerModal());
 $('bf-card-number').addEventListener('input', () => {
@@ -50,28 +50,28 @@ $('bf-card-number').addEventListener('input', () => {
     scannedCardToken  = null; // will validate on save
   }
 });
-
+ 
 // ── Save bidder ───────────────────────────────────────────────
-
+ 
 $('btn-save-bidder').addEventListener('click', saveBidder);
-
+ 
 async function saveBidder() {
   const name    = $('bf-name').value.trim();
   const address = $('bf-address').value.trim();
   const phone   = $('bf-phone').value.trim();
   const email   = $('bf-email').value.trim();
   const cardNum = parseInt($('bf-card-number').value.trim());
-
+ 
   setError($('bidder-form-error'), '');
-
+ 
   if (!name) {
     setError($('bidder-form-error'), 'Name is required.');
     return;
   }
-
+ 
   $('btn-save-bidder').disabled = true;
   $('btn-save-bidder').textContent = 'Saving…';
-
+ 
   if (!editingBidderId) {
     // Card number is optional on Add
     if (cardNum) {
@@ -80,7 +80,7 @@ async function saveBidder() {
         .select('*')
         .eq('card_number', cardNum)
         .single();
-
+ 
       if (cardError || !card) {
         setError($('bidder-form-error'), 'Card number not recognised. Please scan the card or check the number.');
         $('btn-save-bidder').disabled = false;
@@ -100,7 +100,7 @@ async function saveBidder() {
         return;
       }
     }
-
+ 
     const insertPayload = {
       name,
       address: address || null,
@@ -108,25 +108,25 @@ async function saveBidder() {
       email:   email   || null,
     };
     if (cardNum) insertPayload.bidder_number = cardNum;
-
+ 
     const { error } = await sb.from('bidders').insert(insertPayload);
-
+ 
     if (error) {
       setError($('bidder-form-error'), 'Could not save bidder: ' + error.message);
       $('btn-save-bidder').disabled = false;
       $('btn-save-bidder').textContent = 'Save bidder';
       return;
     }
-
+ 
     if (cardNum) {
       await sb.from('bidder_cards').update({ assigned: true }).eq('card_number', cardNum);
     }
-
+ 
   } else {
     // Editing — update all fields including card number if being set for first time
     const b = allBidders.find(x => x.id === editingBidderId);
     const previousCardNum = b?.bidder_number;
-
+ 
     if (cardNum && cardNum !== previousCardNum) {
       // Validate the new card
       const { data: card, error: cardError } = await sb
@@ -134,7 +134,7 @@ async function saveBidder() {
         .select('*')
         .eq('card_number', cardNum)
         .single();
-
+ 
       if (cardError || !card) {
         setError($('bidder-form-error'), 'Card number not recognised. Please scan the card or check the number.');
         $('btn-save-bidder').disabled = false;
@@ -154,7 +154,7 @@ async function saveBidder() {
         return;
       }
     }
-
+ 
     const { error } = await sb.from('bidders').update({
       name,
       address:       address || null,
@@ -162,27 +162,27 @@ async function saveBidder() {
       email:         email   || null,
       bidder_number: cardNum || previousCardNum || null,
     }).eq('id', editingBidderId);
-
+ 
     if (error) {
       setError($('bidder-form-error'), 'Could not save bidder: ' + error.message);
       $('btn-save-bidder').disabled = false;
       $('btn-save-bidder').textContent = 'Save changes';
       return;
     }
-
+ 
     // Mark new card as assigned
     if (cardNum && cardNum !== previousCardNum) {
       await sb.from('bidder_cards').update({ assigned: true }).eq('card_number', cardNum);
     }
   }
-
+ 
   $('btn-save-bidder').disabled = false;
   $('btn-save-bidder').textContent = 'Save bidder';
   hide($('bidder-form-wrap'));
   resetBidderForm();
   await loadBidders();
 }
-
+ 
 function resetBidderForm() {
   editingBidderId  = null;
   scannedCardToken = null;
@@ -195,33 +195,33 @@ function resetBidderForm() {
   hide($('btn-bidder-show-qr'));
   setError($('bidder-form-error'), '');
 }
-
+ 
 $('btn-cancel-bidder-edit').addEventListener('click', () => {
   hide($('bidder-form-wrap'));
   resetBidderForm();
 });
-
+ 
 // ── Show QR (inside edit form) ────────────────────────────────
-
+ 
 $('btn-bidder-show-qr').addEventListener('click', () => {
   const b = allBidders.find(x => x.id === editingBidderId);
   if (!b) return;
   openQRModal(`Bidder #${b.bidder_number}`, b.bidder_number,
     `Bidder #${b.bidder_number} — ${b.name}`);
 });
-
+ 
 // ── Load bidder list ──────────────────────────────────────────
-
+ 
 async function loadBidders() {
   const { data, error } = await sb
     .from('bidders')
     .select('*')
     .order('bidder_number', { ascending: true });
-
+ 
   allBidders = data || [];
   renderBidderList(allBidders, error);
 }
-
+ 
 function renderBidderList(bidders, error) {
   const wrap = $('bidder-list');
   if (error) {
@@ -233,7 +233,7 @@ function renderBidderList(bidders, error) {
     setBidderSelection(null);
     return;
   }
-
+ 
   wrap.innerHTML = bidders.map(b => `
     <div class="quilt-list-row" data-id="${b.id}" tabindex="0"
          role="option" aria-selected="false">
@@ -241,17 +241,17 @@ function renderBidderList(bidders, error) {
       <span class="quilt-list-name">${esc(b.name)}</span>
     </div>
   `).join('');
-
+ 
   wrap.querySelectorAll('.quilt-list-row').forEach(row => {
     row.addEventListener('click',   () => setBidderSelection(row.dataset.id === selectedBidderId ? null : row.dataset.id));
     row.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') setBidderSelection(row.dataset.id === selectedBidderId ? null : row.dataset.id);
     });
   });
-
+ 
   if (selectedBidderId) highlightSelectedBidderRow();
 }
-
+ 
 function setBidderSelection(id) {
   selectedBidderId = id;
   highlightSelectedBidderRow();
@@ -263,7 +263,7 @@ function setBidderSelection(id) {
     resetBidderForm();
   }
 }
-
+ 
 function highlightSelectedBidderRow() {
   $('bidder-list').querySelectorAll('.quilt-list-row').forEach(row => {
     const selected = row.dataset.id === selectedBidderId;
@@ -271,13 +271,13 @@ function highlightSelectedBidderRow() {
     row.setAttribute('aria-selected', selected);
   });
 }
-
+ 
 // ── Edit bidder ───────────────────────────────────────────────
-
+ 
 function startEditBidder(id) {
   const b = allBidders.find(x => x.id === id);
   if (!b) return;
-
+ 
   editingBidderId = id;
   $('bf-name').value        = b.name;
   $('bf-address').value     = b.address || '';
@@ -285,7 +285,7 @@ function startEditBidder(id) {
   $('bf-email').value       = b.email   || '';
   $('bf-card-number').value = b.bidder_number || '';
   $('bf-card-number').readOnly = !!b.bidder_number;
-
+ 
   $('btn-save-bidder').textContent = 'Save changes';
   $('bidder-form-title').textContent = 'Modify Bidder';
   show($('btn-scan-card'));
@@ -297,13 +297,13 @@ function startEditBidder(id) {
   show($('bidder-form-wrap'));
   $('bidder-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
+ 
 // ── Delete bidder ─────────────────────────────────────────────
-
+ 
 async function deleteBidder(id, name) {
   const ok = await confirmDelete(`Delete bidder "${name}"? This cannot be undone.`);
   if (!ok) return;
-
+ 
   // Find bidder number to un-assign the card
   const b = allBidders.find(x => x.id === id);
   await sb.from('bidders').delete().eq('id', id);
@@ -317,103 +317,55 @@ async function deleteBidder(id, name) {
   setBidderSelection(null);
   loadBidders();
 }
-
+ 
 // ── Lookup bidder by number (used by bids + checkout) ─────────
-
+ 
 async function getBidderByNumber(num) {
   const { data } = await sb.from('bidders')
     .select('*').eq('bidder_number', parseInt(num)).single();
   return data;
 }
-
+ 
 // ── QR Scanner modal ──────────────────────────────────────────
-
-let scannerStream   = null;
-let scannerAnimFrame = null;
-
+ 
 function openScannerModal() {
   show($('scanner-modal'));
-  startScanner();
+  setError($('scanner-error'), '');
+  startBidderCardScanner();
 }
-
+ 
 function closeScannerModal() {
-  stopScanner();
+  stopScanner('scanner-video');
   hide($('scanner-modal'));
   setError($('scanner-error'), '');
 }
-
-async function startScanner() {
-  setError($('scanner-error'), '');
-  const video = $('scanner-video');
-  try {
-    scannerStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
-    video.srcObject = scannerStream;
-    video.setAttribute('playsinline', true);
-    await video.play();
-    scannerAnimFrame = requestAnimationFrame(scanFrame);
-  } catch (err) {
-    setError($('scanner-error'), 'Camera access denied. Please enter the card number manually.');
-  }
-}
-
-function stopScanner() {
-  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
-  if (scannerStream)    { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
-  const video = $('scanner-video');
-  video.srcObject = null;
-}
-
-function scanFrame() {
-  const video  = $('scanner-video');
-  const canvas = $('scanner-canvas');
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-    scannerAnimFrame = requestAnimationFrame(scanFrame);
-    return;
-  }
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'dontInvert',
+ 
+async function startBidderCardScanner() {
+  startScanner('scanner-video', async rawValue => {
+    stopScanner('scanner-video');
+ 
+    const { data: card, error } = await sb
+      .from('bidder_cards')
+      .select('*')
+      .eq('qr_token', rawValue)
+      .single();
+ 
+    if (error || !card) {
+      setError($('scanner-error'), 'Card not recognised. Try scanning again or enter manually.');
+      startBidderCardScanner();
+      return;
+    }
+ 
+    if (card.assigned) {
+      setError($('scanner-error'), `Card #${card.card_number} is already registered to another bidder.`);
+      startBidderCardScanner();
+      return;
+    }
+ 
+    // Success
+    scannedCardToken  = card.qr_token;
+    scannedCardNumber = card.card_number;
+    $('bf-card-number').value = card.card_number;
+    closeScannerModal();
   });
-  if (code) {
-    handleScan(code.data);
-    return; // stop scanning once found
-  }
-  scannerAnimFrame = requestAnimationFrame(scanFrame);
-}
-
-async function handleScan(rawValue) {
-  stopScanner();
-  setError($('scanner-error'), '');
-
-  // Look up token in bidder_cards
-  const { data: card, error } = await sb
-    .from('bidder_cards')
-    .select('*')
-    .eq('qr_token', rawValue)
-    .single();
-
-  if (error || !card) {
-    setError($('scanner-error'), 'Card not recognised. Try scanning again or enter manually.');
-    // Restart scanner
-    startScanner();
-    return;
-  }
-
-  if (card.assigned) {
-    setError($('scanner-error'), `Card #${card.card_number} is already registered to another bidder.`);
-    startScanner();
-    return;
-  }
-
-  // Success
-  scannedCardToken  = card.qr_token;
-  scannedCardNumber = card.card_number;
-  $('bf-card-number').value = card.card_number;
-  closeScannerModal();
 }
