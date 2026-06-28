@@ -145,11 +145,11 @@ async function saveQuilt() {
   if (editingQuiltId) {
     ({ error } = await sb.from('quilts').update(payload).eq('id', editingQuiltId));
   } else {
-    // Assign quilt number manually: max existing + 1, or 1 if table is empty
-    const maxNum = allQuilts.length > 0
-      ? Math.max(...allQuilts.map(q => q.quilt_number || 0))
-      : 0;
-    payload.quilt_number = maxNum + 1;
+    // Assign lowest unused quilt number starting from 1
+    const usedNums = new Set(allQuilts.map(q => q.quilt_number));
+    let nextNum = 1;
+    while (usedNums.has(nextNum)) nextNum++;
+    payload.quilt_number = nextNum;
     ({ error } = await sb.from('quilts').insert(payload));
   }
  
