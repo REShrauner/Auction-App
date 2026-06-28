@@ -1,12 +1,12 @@
 // ── Auth: login, account request, admin approval ──────────────
-
+ 
 // ── Login / Request tab switching ────────────────────────────
-
+ 
 document.querySelectorAll('.login-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-
+ 
     const which = tab.dataset.tab;
     toggle($('login-form-panel'),   which === 'login');
     toggle($('request-form-panel'), which === 'request');
@@ -15,92 +15,92 @@ document.querySelectorAll('.login-tab').forEach(tab => {
     hide($('request-success'));
   });
 });
-
+ 
 // ── Sign in ───────────────────────────────────────────────────
-
+ 
 function usernameToEmail(username) {
   // Supabase auth requires an email; we map username → username@quiltauction.com
   return username.trim().toLowerCase() + '@quiltauction.com';
 }
-
+ 
 $('btn-login').addEventListener('click', async () => {
   const username = $('login-username').value.trim();
   const password = $('login-password').value;
-
+ 
   if (!username || !password) {
     setError($('login-error'), 'Enter your username and password.');
     return;
   }
-
+ 
   $('btn-login').disabled = true;
   $('btn-login').textContent = 'Signing in…';
   setError($('login-error'), '');
-
+ 
   const { error } = await sb.auth.signInWithPassword({
     email:    usernameToEmail(username),
     password: password,
   });
-
+ 
   $('btn-login').disabled = false;
   $('btn-login').textContent = 'Sign in';
-
+ 
   if (error) {
     setError($('login-error'), 'Username or password is incorrect.');
   }
 });
-
+ 
 $('login-password').addEventListener('keydown', e => {
   if (e.key === 'Enter') $('btn-login').click();
 });
-
+ 
 // ── Account request ────────────────────────────────────────────
-
+ 
 function validatePassword(pw) {
   if (pw.length < 8)          return 'Password must be at least 8 characters.';
   if (!/[A-Z]/.test(pw))      return 'Password must contain at least one uppercase letter.';
   if (!/[0-9]/.test(pw))      return 'Password must contain at least one number.';
   return null;
 }
-
+ 
 $('btn-request').addEventListener('click', async () => {
   const fullName = $('req-name').value.trim();
   const username = $('req-username').value.trim();
   const password = $('req-password').value;
-
+ 
   setError($('request-error'), '');
   hide($('request-success'));
-
+ 
   if (!fullName || !username || !password) {
     setError($('request-error'), 'All fields are required.');
     return;
   }
-
+ 
   const pwError = validatePassword(password);
   if (pwError) { setError($('request-error'), pwError); return; }
-
+ 
   $('btn-request').disabled = true;
   $('btn-request').textContent = 'Submitting…';
-
+ 
   // Check username not already taken
   const { data: existing } = await sb.from('account_requests').select('id').eq('username', username);
   const { data: existingProfile } = await sb.from('profiles').select('id').eq('username', username);
-
+ 
   if ((existing && existing.length > 0) || (existingProfile && existingProfile.length > 0)) {
     setError($('request-error'), 'That username is already taken.');
     $('btn-request').disabled = false;
     $('btn-request').textContent = 'Submit request';
     return;
   }
-
+ 
   const { error } = await sb.from('account_requests').insert({
     full_name: fullName,
     username:  username,
     password:  password,
   });
-
+ 
   $('btn-request').disabled = false;
   $('btn-request').textContent = 'Submit request';
-
+ 
   if (error) {
     setError($('request-error'), 'Could not submit request. Try again.');
   } else {
@@ -111,9 +111,9 @@ $('btn-request').addEventListener('click', async () => {
     $('request-success').textContent = 'Request submitted. An admin will review it shortly.';
   }
 });
-
+ 
 // ── Admin: load pending requests + all accounts ───────────────
-
+ 
 async function loadAdmin() {
   // Tab switching
   document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -124,7 +124,7 @@ async function loadAdmin() {
       $('admin-tab-' + tab.dataset.tab).classList.remove('hidden');
     });
   });
-
+ 
   // Reports tab — wire report buttons to the admin-tab output divs
   document.querySelectorAll('#admin-tab-reports [data-report]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -134,11 +134,11 @@ async function loadAdmin() {
     });
   });
   $('btn-print-admin-report').addEventListener('click', () => window.print());
-
+ 
   await loadPendingRequests();
   await loadAllUsers();
 }
-
+ 
 const ROLE_LABELS = [
   ['quilt_entry',    'Quilt entry'],
   ['bidder_entry',   'Bidder entry'],
@@ -146,20 +146,20 @@ const ROLE_LABELS = [
   ['documentarian2', 'Documentarian 2'],
   ['checkout',       'Checkout'],
 ];
-
+ 
 async function loadPendingRequests() {
   const { data: requests, error } = await sb
     .from('account_requests')
     .select('*')
     .order('created_at', { ascending: true });
-
+ 
   const wrap = $('admin-requests-list');
-
+ 
   if (error || !requests || requests.length === 0) {
     wrap.innerHTML = '<div class="empty-state">No pending requests.</div>';
     return;
   }
-
+ 
   wrap.innerHTML = requests.map(r => `
     <div class="approval-card" data-req-id="${r.id}" style="flex-direction:column;align-items:flex-start;gap:12px">
       <div style="display:flex;justify-content:space-between;width:100%;align-items:flex-start">
@@ -188,7 +188,7 @@ async function loadPendingRequests() {
       </div>
     </div>
   `).join('');
-
+ 
   wrap.querySelectorAll('[data-action="approve"]').forEach(btn => {
     btn.addEventListener('click', () => approveRequest(btn.dataset));
   });
@@ -196,7 +196,7 @@ async function loadPendingRequests() {
     btn.addEventListener('click', () => rejectRequest(btn.dataset.reqId));
   });
 }
-
+ 
 async function approveRequest({ reqId, name, username, password }) {
   // Collect selected roles
   const roleBoxes = document.querySelectorAll(`input[type="checkbox"][data-req-id="${reqId}"]`);
@@ -207,10 +207,10 @@ async function approveRequest({ reqId, name, username, password }) {
     return;
   }
   if (roleError) { roleError.style.display = 'none'; }
-
+ 
   const btn = document.querySelector(`[data-action="approve"][data-req-id="${reqId}"]`);
   if (btn) { btn.disabled = true; btn.textContent = 'Approving…'; }
-
+ 
   // Create the Supabase auth user via admin — we call a Supabase Edge Function
   // that has service-role access. For now, use the workaround of signing up
   // the user with their chosen credentials, then immediately approving.
@@ -221,41 +221,41 @@ async function approveRequest({ reqId, name, username, password }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password, full_name: name, roles }),
   });
-
+ 
   const result = await resp.json();
-
+ 
   if (!resp.ok || result.error) {
     alert('Error creating account: ' + (result.error || 'Unknown error'));
     if (btn) { btn.disabled = false; btn.textContent = 'Approve'; }
     return;
   }
-
+ 
   // Delete the request
   await sb.from('account_requests').delete().eq('id', reqId);
-
+ 
   loadPendingRequests();
   loadAllUsers();
 }
-
+ 
 async function rejectRequest(reqId) {
   const ok = await confirmDelete('Reject and discard this account request?');
   if (!ok) return;
   await sb.from('account_requests').delete().eq('id', reqId);
   loadPendingRequests();
 }
-
+ 
 async function loadAllUsers() {
   const { data: users, error } = await sb
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: true });
-
+ 
   const wrap = $('admin-users-list');
   if (error || !users || users.length === 0) {
     wrap.innerHTML = '<div class="empty-state">No accounts yet.</div>';
     return;
   }
-
+ 
   wrap.innerHTML = users.map(u => `
     <div class="approval-card" style="flex-direction:column;align-items:flex-start;gap:10px">
       <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
@@ -266,11 +266,18 @@ async function loadAllUsers() {
             ${u.is_approved ? '<span class="badge badge-ready">Approved</span>' : '<span class="badge badge-near">Pending</span>'}
           </div>
         </div>
-        ${!u.is_admin && u.id !== currentUser?.id ? `
-          <button class="btn btn-secondary btn-sm" data-action="toggle-admin"
-            data-uid="${u.id}" data-current="${u.is_admin}">
-            ${u.is_admin ? 'Remove admin' : 'Make admin'}
-          </button>` : ''}
+        <div style="display:flex;gap:6px;align-items:center">
+          ${!u.is_admin && u.id !== currentUser?.id ? `
+            <button class="btn btn-secondary btn-sm" data-action="toggle-admin"
+              data-uid="${u.id}" data-current="${u.is_admin}">
+              ${u.is_admin ? 'Remove admin' : 'Make admin'}
+            </button>` : ''}
+          ${u.id !== currentUser?.id ? `
+            <button class="btn btn-danger btn-sm" data-action="delete-user"
+              data-uid="${u.id}" data-username="${esc(u.username)}" data-is-admin="${u.is_admin}">
+              Delete
+            </button>` : ''}
+        </div>
       </div>
       ${!u.is_admin ? `
         <div style="width:100%">
@@ -291,7 +298,7 @@ async function loadAllUsers() {
         </div>` : ''}
     </div>
   `).join('');
-
+ 
   wrap.querySelectorAll('[data-action="toggle-admin"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const newVal = btn.dataset.current !== 'true';
@@ -299,7 +306,44 @@ async function loadAllUsers() {
       loadAllUsers();
     });
   });
-
+ 
+  wrap.querySelectorAll('[data-action="delete-user"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const { uid, username, isAdmin } = btn.dataset;
+ 
+      // Block deletion of last admin
+      if (isAdmin === 'true') {
+        const adminCount = users.filter(u => u.is_admin).length;
+        if (adminCount <= 1) {
+          alert('Cannot delete the last admin account.');
+          return;
+        }
+      }
+ 
+      const ok = await confirmDelete(`Delete account "@${username}"? This cannot be undone.`);
+      if (!ok) return;
+ 
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
+ 
+      const resp = await fetch('https://uoqscftixhpdznjjghpa.supabase.co/functions/v1/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', user_id: uid }),
+      });
+ 
+      const result = await resp.json();
+      if (!resp.ok || result.error) {
+        alert('Error deleting account: ' + (result.error || 'Unknown error'));
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        return;
+      }
+ 
+      loadAllUsers();
+    });
+  });
+ 
   wrap.querySelectorAll('[data-action="save-roles"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const uid = btn.dataset.uid;
@@ -317,7 +361,7 @@ async function loadAllUsers() {
     });
   });
 }
-
+ 
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
