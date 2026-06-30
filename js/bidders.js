@@ -42,6 +42,12 @@ $('btn-bidder-delete').addEventListener('click', async () => {
  
 $('btn-scan-card').addEventListener('click', () => openScannerModal());
 $('btn-scan-close').addEventListener('click', () => closeScannerModal());
+$('btn-clear-card').addEventListener('click', () => {
+  $('bf-card-number').value = '';
+  scannedCardToken  = null;
+  scannedCardNumber = null;
+  toggle($('btn-bidder-show-qr'), false);
+});
 $('bf-card-number').addEventListener('input', () => {
   // Manual fallback: look up token by card number
   const num = parseInt($('bf-card-number').value.trim());
@@ -199,6 +205,7 @@ function resetBidderForm() {
   $('bf-card-number').readOnly = false;
   show($('btn-scan-card'));
   hide($('btn-bidder-show-qr'));
+  hide($('btn-clear-card'));
   setError($('bidder-form-error'), '');
 }
  
@@ -297,8 +304,10 @@ function startEditBidder(id) {
   show($('btn-scan-card'));
   if (b.bidder_number) {
     show($('btn-bidder-show-qr'));
+    show($('btn-clear-card'));
   } else {
     hide($('btn-bidder-show-qr'));
+    hide($('btn-clear-card'));
   }
   show($('bidder-form-wrap'));
   $('bidder-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
