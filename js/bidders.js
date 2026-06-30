@@ -170,9 +170,12 @@ async function saveBidder() {
       return;
     }
  
-    // Mark new card as assigned
+    // Mark new card as assigned, and free up the old one
     if (cardNum && cardNum !== previousCardNum) {
       await sb.from('bidder_cards').update({ assigned: true }).eq('card_number', cardNum);
+      if (previousCardNum) {
+        await sb.from('bidder_cards').update({ assigned: false }).eq('card_number', previousCardNum);
+      }
     }
   }
  
@@ -284,7 +287,6 @@ function startEditBidder(id) {
   $('bf-phone').value       = b.phone   || '';
   $('bf-email').value       = b.email   || '';
   $('bf-card-number').value = b.bidder_number || '';
-  $('bf-card-number').readOnly = !!b.bidder_number;
  
   $('btn-save-bidder').textContent = 'Save changes';
   $('bidder-form-title').textContent = 'Modify Bidder';
