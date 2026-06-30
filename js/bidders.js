@@ -60,7 +60,8 @@ async function saveBidder() {
   const address = $('bf-address').value.trim();
   const phone   = $('bf-phone').value.trim();
   const email   = $('bf-email').value.trim();
-  const cardNum = parseInt($('bf-card-number').value.trim());
+  const cardNumRaw = $('bf-card-number').value.trim();
+  const cardNum = cardNumRaw === '' ? null : parseInt(cardNumRaw);
  
   setError($('bidder-form-error'), '');
  
@@ -160,7 +161,7 @@ async function saveBidder() {
       address:       address || null,
       phone:         phone   || null,
       email:         email   || null,
-      bidder_number: cardNum || previousCardNum || null,
+      bidder_number: cardNum,
     }).eq('id', editingBidderId);
  
     if (error) {
@@ -176,6 +177,8 @@ async function saveBidder() {
       if (previousCardNum) {
         await sb.from('bidder_cards').update({ assigned: false }).eq('card_number', previousCardNum);
       }
+    } else if (!cardNum && previousCardNum) {
+      await sb.from('bidder_cards').update({ assigned: false }).eq('card_number', previousCardNum);
     }
   }
  
@@ -208,9 +211,10 @@ $('btn-cancel-bidder-edit').addEventListener('click', () => {
  
 $('btn-bidder-show-qr').addEventListener('click', () => {
   const b = allBidders.find(x => x.id === editingBidderId);
-  if (!b) return;
-  openQRModal(`Bidder #${b.bidder_number}`, b.bidder_number,
-    `Bidder #${b.bidder_number} — ${b.name}`);
+  const num = parseInt($('bf-card-number').value.trim());
+  if (!num) return;
+  openQRModal(`Bidder #${num}`, num,
+    `Bidder #${num} — ${b ? b.name : ''}`);
 });
  
 // ── Load bidder list ──────────────────────────────────────────
