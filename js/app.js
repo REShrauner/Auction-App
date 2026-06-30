@@ -222,21 +222,7 @@ function renderHomeDashboard() {
     $('home-roles').textContent = roleNames || 'No roles assigned';
   }
 
-  // Build accessible screen buttons
-  const accessible = Object.keys(SCREEN_LABELS).filter(s => userCanAccess(s));
-  $('home-buttons').innerHTML = accessible.map(s => {
-    const { label, icon } = SCREEN_LABELS[s];
-    return `
-      <button class="btn btn-primary" data-goto="${s}"
-        style="font-size:var(--fs-lg);padding:18px 24px;text-align:left;display:flex;align-items:center;gap:16px;border-radius:12px">
-        <span style="font-size:1.6em;line-height:1">${icon}</span>
-        <span>${label}</span>
-      </button>`;
-  }).join('');
 
-  $('home-buttons').querySelectorAll('[data-goto]').forEach(btn => {
-    btn.addEventListener('click', () => showScreen(btn.dataset.goto));
-  });
 }
 
 // ── Boot ──────────────────────────────────────────────────────
