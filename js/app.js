@@ -63,6 +63,7 @@ function showScreen(name) {
     btn.classList.toggle('active', btn.dataset.screen === name);
   });
   // Trigger screen-specific refresh
+  if (name === 'home')      { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); }
   if (name === 'quilts')    { if (typeof loadQuilts   === 'function') loadQuilts(); }
   if (name === 'bidders')   { if (typeof loadBidders  === 'function') loadBidders(); }
   if (name === 'bids')      { if (typeof initBids     === 'function') initBids(); }
