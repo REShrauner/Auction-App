@@ -34,13 +34,14 @@
   <!-- ── Navigation ─────────────────────────────────────────── -->
   <nav id="app-nav" class="hidden">
     <span class="nav-title">Quilt Auction</span>
-    <button class="nav-btn" data-screen="home"><i class="ti ti-home" aria-hidden="true"></i><span>Home</span></button>
-    <button class="nav-btn" data-screen="quilts"><i class="ti ti-needle-thread" aria-hidden="true"></i><span>Quilts</span></button>
-    <button class="nav-btn" data-screen="bidders"><i class="ti ti-id-badge" aria-hidden="true"></i><span>Bidders</span></button>
-    <button class="nav-btn" data-screen="bids"><i class="ti ti-hand-stop" aria-hidden="true"></i><span>Bids</span></button>
-    <button class="nav-btn" data-screen="checkout"><i class="ti ti-credit-card" aria-hidden="true"></i><span>Checkout</span></button>
-    <button class="nav-btn admin-only hidden" data-screen="reports"><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Reports</span></button>
-    <button class="nav-btn admin-only hidden" data-screen="admin"><i class="ti ti-settings" aria-hidden="true"></i><span>Admin</span></button>
+    <div id="nav-btn-group">
+      <button class="nav-btn" data-screen="quilts"><i class="ti ti-needle-thread" aria-hidden="true"></i><span>Quilts</span></button>
+      <button class="nav-btn" data-screen="bidders"><i class="ti ti-id-badge" aria-hidden="true"></i><span>Bidders</span></button>
+      <button class="nav-btn" data-screen="bids"><i class="ti ti-hand-stop" aria-hidden="true"></i><span>Bids</span></button>
+      <button class="nav-btn" data-screen="checkout"><i class="ti ti-credit-card" aria-hidden="true"></i><span>Checkout</span></button>
+      <button class="nav-btn admin-only hidden" data-screen="reports"><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Reports</span></button>
+      <button class="nav-btn admin-only hidden" data-screen="admin"><i class="ti ti-settings" aria-hidden="true"></i><span>Admin</span></button>
+    </div>
     <span id="nav-user-info"></span>
     <button id="nav-logout">Sign out</button>
   </nav>
@@ -107,7 +108,7 @@
         <p id="home-roles" class="text-muted" style="font-size:var(--fs-md)"></p>
       </div>
     </div>
-
+ 
     <!-- ── Quilts ────────────────────────────────────────────── -->
     <div id="screen-quilts" class="screen">
       <h2 class="page-heading">Quilts</h2>
