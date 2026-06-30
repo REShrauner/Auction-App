@@ -46,7 +46,7 @@ $('btn-confirm-no').addEventListener('click', () => {
 
 // ── Screen routing ────────────────────────────────────────────
 
-const SCREENS = ['login','quilts','bidders','bids','checkout','reports','admin'];
+const SCREENS = ['login','home','quilts','bidders','bids','checkout','reports','admin'];
 
 function showScreen(name) {
   // Block access to screens the user doesn't have a role for
@@ -63,6 +63,7 @@ function showScreen(name) {
     btn.classList.toggle('active', btn.dataset.screen === name);
   });
   // Trigger screen-specific refresh
+  if (name === 'home')      { renderHomeDashboard(); }
   if (name === 'quilts')    { if (typeof loadQuilts   === 'function') loadQuilts(); }
   if (name === 'bidders')   { if (typeof loadBidders  === 'function') loadBidders(); }
   if (name === 'bids')      { if (typeof initBids     === 'function') initBids(); }
@@ -126,13 +127,8 @@ function applySession(user, profile) {
 
   $('nav-user-info').textContent = profile?.username || user?.email || '';
 
-  // Navigate to first accessible screen
-  const firstScreen = isAdmin ? 'quilts' :
-    Object.values(ROLE_SCREEN_MAP).find(s =>
-      roles.some(r => ROLE_SCREEN_MAP[r] === s)
-    ) || 'quilts';
-
-  showScreen(firstScreen);
+  // Navigate to home dashboard
+  showScreen('home');
 }
 
 function clearSession() {
@@ -190,6 +186,58 @@ function openQRModal(title, value, label) {
 $('btn-qr-close').addEventListener('click', () => hide($('qr-modal')));
 $('btn-qr-print').addEventListener('click', () => window.print());
 $('qr-modal').addEventListener('click', e => { if (e.target === $('qr-modal')) hide($('qr-modal')); });
+
+// ── Home dashboard ───────────────────────────────────────────
+
+const SCREEN_LABELS = {
+  quilts:   { label: 'Quilts',   icon: '🧵' },
+  bidders:  { label: 'Bidders',  icon: '🪪' },
+  bids:     { label: 'Bids',     icon: '✋' },
+  checkout: { label: 'Checkout', icon: '💳' },
+  reports:  { label: 'Reports',  icon: '📊' },
+  admin:    { label: 'Admin',    icon: '⚙️'  },
+};
+
+const ROLE_DISPLAY = {
+  quilt_entry:    'Quilt Entry',
+  bidder_entry:   'Bidder Entry',
+  documentarian1: 'Documentarian 1',
+  documentarian2: 'Documentarian 2',
+  checkout:       'Checkout',
+};
+
+function renderHomeDashboard() {
+  if (!currentProfile) return;
+
+  const isAdmin = currentProfile.is_admin;
+  const roles   = currentProfile.roles || [];
+  const name    = currentProfile.full_name || currentProfile.username || '';
+
+  $('home-welcome').textContent = `Welcome, ${name}!`;
+
+  if (isAdmin) {
+    $('home-roles').textContent = 'Administrator';
+  } else {
+    const roleNames = roles.map(r => ROLE_DISPLAY[r] || r).join(', ');
+    $('home-roles').textContent = roleNames || 'No roles assigned';
+  }
+
+  // Build accessible screen buttons
+  const accessible = Object.keys(SCREEN_LABELS).filter(s => userCanAccess(s));
+  $('home-buttons').innerHTML = accessible.map(s => {
+    const { label, icon } = SCREEN_LABELS[s];
+    return `
+      <button class="btn btn-primary" data-goto="${s}"
+        style="font-size:var(--fs-lg);padding:18px 24px;text-align:left;display:flex;align-items:center;gap:16px;border-radius:12px">
+        <span style="font-size:1.6em;line-height:1">${icon}</span>
+        <span>${label}</span>
+      </button>`;
+  }).join('');
+
+  $('home-buttons').querySelectorAll('[data-goto]').forEach(btn => {
+    btn.addEventListener('click', () => showScreen(btn.dataset.goto));
+  });
+}
 
 // ── Boot ──────────────────────────────────────────────────────
 

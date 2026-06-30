@@ -33,6 +33,7 @@
   <!-- ── Navigation ─────────────────────────────────────────── -->
   <nav id="app-nav" class="hidden">
     <span class="nav-title">Quilt Auction</span>
+    <button class="nav-btn" data-screen="home">Home</button>
     <button class="nav-btn" data-screen="quilts">Quilts</button>
     <button class="nav-btn" data-screen="bidders">Bidders</button>
     <button class="nav-btn" data-screen="bids">Bids</button>
@@ -98,6 +99,15 @@
       </div>
     </div>
  
+    <!-- ── Home dashboard ──────────────────────────────────────── -->
+    <div id="screen-home" class="screen">
+      <div style="max-width:480px;margin:0 auto;padding:24px 0">
+        <h2 id="home-welcome" class="page-heading" style="font-size:var(--fs-xl);margin-bottom:4px"></h2>
+        <p id="home-roles" class="text-muted" style="margin-bottom:32px;font-size:var(--fs-md)"></p>
+        <div id="home-buttons" style="display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+    </div>
+
     <!-- ── Quilts ────────────────────────────────────────────── -->
     <div id="screen-quilts" class="screen">
       <h2 class="page-heading">Quilts</h2>
