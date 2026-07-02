@@ -13,6 +13,16 @@ function isDoc2()  { return currentProfile?.roles?.includes('documentarian2') ||
 // ── Init bids screen ──────────────────────────────────────────
 
 async function initBids() {
+  // Bidding is only available once data has been locked for the auction
+  if (!dataLocked) {
+    show($('bids-locked-message'));
+    hide($('bids-active-wrap'));
+    stopPolling();
+    return;
+  }
+  hide($('bids-locked-message'));
+  show($('bids-active-wrap'));
+
   await loadBidQuiltList();
   applyPanelVisibility();
   if (selectedBidQuiltId) {

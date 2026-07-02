@@ -18,7 +18,7 @@
  
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
- 
+
   <!-- Home screen / PWA icons -->
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
@@ -26,13 +26,13 @@
   <link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon-152.png">
   <link rel="apple-touch-icon" sizes="120x120" href="icons/apple-touch-icon-120.png">
   <link rel="manifest" href="manifest.json">
- 
+
   <!-- iOS "Add to Home Screen" behavior -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Quilt Auction">
   <meta name="theme-color" content="#2C8A7C">
- 
+
   <!-- QR code generation -->
   <script src="js/qrcode.min.js"></script>
  
@@ -127,6 +127,10 @@
     <div id="screen-quilts" class="screen">
       <h2 class="page-heading">Quilts</h2>
  
+      <div id="quilts-lock-notice" class="alert alert-needs hidden" style="margin-bottom:14px">
+        Data is locked for the auction. Quilts cannot be added, modified, or deleted until an admin unlocks data.
+      </div>
+ 
       <!-- Search -->
       <div class="quilt-search-wrap">
         <input type="search" id="quilt-search" placeholder="Search by number or name…" autocomplete="off">
@@ -199,6 +203,10 @@
     <div id="screen-bidders" class="screen">
       <h2 class="page-heading">Bidders</h2>
  
+      <div id="bidders-lock-notice" class="alert alert-needs hidden" style="margin-bottom:14px">
+        Data is locked for the auction. Bidders cannot be added, modified, or deleted until an admin unlocks data.
+      </div>
+ 
       <!-- Search -->
       <div class="quilt-search-wrap">
         <input type="search" id="bidder-search" placeholder="Search by number or name…" autocomplete="off">
@@ -257,6 +265,13 @@
     <div id="screen-bids" class="screen">
       <h2 class="page-heading">Bid Documentation</h2>
  
+      <div id="bids-locked-message" class="card hidden" style="text-align:center;padding:32px 20px">
+        <div style="font-size:var(--fs-xl);font-weight:700;margin-bottom:8px">Bidding isn't open yet</div>
+        <div class="text-muted">Data must be locked by an admin (Admin → Prepare for Auction) before bid documentation can begin.</div>
+      </div>
+ 
+      <div id="bids-active-wrap">
+ 
       <!-- Search -->
       <div class="quilt-search-wrap">
         <input type="search" id="bid-quilt-search" placeholder="Search by number or name…" autocomplete="off">
@@ -310,6 +325,7 @@
           <div id="bid-b-error" class="form-error hidden"></div>
         </div>
  
+      </div>
       </div>
     </div>
  
@@ -430,6 +446,7 @@
         <button class="admin-tab active" data-tab="accounts">Accounts</button>
         <button class="admin-tab" data-tab="cards">Bidder Cards</button>
         <button class="admin-tab" data-tab="appearance">Appearance</button>
+        <button class="admin-tab" data-tab="prepare">Prepare for Auction</button>
         <button class="admin-tab" data-tab="reports">Reports</button>
       </div>
  
@@ -547,6 +564,31 @@
         </div>
       </div>
  
+      <!-- ── Prepare for Auction tab ── -->
+      <div class="admin-tab-panel hidden" id="admin-tab-prepare">
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">Prepare for auction</h3>
+
+        <div class="card mb-16" id="prepare-lock-card">
+          <div class="flex-center gap-8" style="flex-wrap:wrap">
+            <div>
+              <div id="prepare-lock-status" class="fw-bold" style="font-size:var(--fs-lg)">Checking status…</div>
+              <div id="prepare-lock-sub" class="text-muted" style="font-size:var(--fs-sm)"></div>
+            </div>
+            <button id="btn-toggle-lock" class="btn btn-accent" style="margin-left:auto">…</button>
+          </div>
+        </div>
+
+        <h4 style="font-size:var(--fs-lg);font-weight:700;margin-bottom:10px">Quilts without a number</h4>
+        <div class="card mb-16" id="prepare-quilts-list">
+          <div class="text-muted"><span class="spinner"></span> Loading…</div>
+        </div>
+
+        <h4 style="font-size:var(--fs-lg);font-weight:700;margin-bottom:10px">Bidders without a number</h4>
+        <div class="card mb-16" id="prepare-bidders-list">
+          <div class="text-muted"><span class="spinner"></span> Loading…</div>
+        </div>
+      </div>
+
       <!-- ── Reports tab ── -->
       <div class="admin-tab-panel hidden" id="admin-tab-reports">
         <h3 class="page-heading" style="font-size:var(--fs-xl)">Reports</h3>
@@ -620,6 +662,7 @@
   <script src="js/auth.js"></script>
   <script src="js/quilts.js"></script>
   <script src="js/bidders.js"></script>
+  <script src="js/prepare.js"></script>
   <script src="js/cards.js"></script>
   <script src="js/bids.js"></script>
   <script src="js/checkout.js"></script>

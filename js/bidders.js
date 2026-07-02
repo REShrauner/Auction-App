@@ -62,6 +62,11 @@ $('bf-card-number').addEventListener('input', () => {
 $('btn-save-bidder').addEventListener('click', saveBidder);
  
 async function saveBidder() {
+  await loadLockState();
+  if (dataLocked) {
+    setError($('bidder-form-error'), 'Data is locked for the auction. Unlock it in Admin → Prepare for Auction to make changes.');
+    return;
+  }
   const name    = $('bf-name').value.trim();
   const address = $('bf-address').value.trim();
   const phone   = $('bf-phone').value.trim();
@@ -234,6 +239,15 @@ async function loadBidders() {
  
   allBidders = data || [];
   renderBidderList(allBidders, error);
+  applyBidderLockState();
+}
+ 
+function applyBidderLockState() {
+  toggle($('bidders-lock-notice'), !!dataLocked);
+  $('btn-bidder-add').disabled = !!dataLocked;
+  const hasSelection = !!selectedBidderId;
+  $('btn-bidder-modify').disabled = dataLocked || !hasSelection;
+  $('btn-bidder-delete').disabled = dataLocked || !hasSelection;
 }
  
 function renderBidderList(bidders, error) {
@@ -270,8 +284,8 @@ function setBidderSelection(id) {
   selectedBidderId = id;
   highlightSelectedBidderRow();
   const has = !!id;
-  $('btn-bidder-modify').disabled = !has;
-  $('btn-bidder-delete').disabled = !has;
+  $('btn-bidder-modify').disabled = dataLocked || !has;
+  $('btn-bidder-delete').disabled = dataLocked || !has;
   if (!has) {
     hide($('bidder-form-wrap'));
     resetBidderForm();
@@ -316,6 +330,8 @@ function startEditBidder(id) {
 // ── Delete bidder ─────────────────────────────────────────────
  
 async function deleteBidder(id, name) {
+  await loadLockState();
+  if (dataLocked) { alert('Data is locked for the auction. Unlock it first to delete bidders.'); return; }
   const ok = await confirmDelete(`Delete bidder "${name}"? This cannot be undone.`);
   if (!ok) return;
  

@@ -2,6 +2,13 @@
  
 let currentUser    = null;
 let currentProfile = null;
+let dataLocked      = false;
+
+async function loadLockState() {
+  const { data } = await sb.from('app_settings').select('data_locked').eq('id', 1).single();
+  dataLocked = !!data?.data_locked;
+  return dataLocked;
+}
  
 // ── Helpers ───────────────────────────────────────────────────
  
@@ -48,7 +55,7 @@ $('btn-confirm-no').addEventListener('click', () => {
  
 const SCREENS = ['login','home','quilts','bidders','bids','checkout','reports','admin'];
  
-function showScreen(name) {
+async function showScreen(name) {
   // Block access to screens the user doesn't have a role for
   const restricted = ['quilts','bidders','bids','checkout','reports','admin'];
   if (restricted.includes(name) && !userCanAccess(name)) {
@@ -62,6 +69,11 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.screen === name);
   });
+ 
+  if (['quilts','bidders','bids','admin'].includes(name)) {
+    await loadLockState();
+  }
+ 
   // Trigger screen-specific refresh
   if (name === 'home')      { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); }
   if (name === 'quilts')    { if (typeof loadQuilts   === 'function') loadQuilts(); }

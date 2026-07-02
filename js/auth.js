@@ -122,8 +122,13 @@ async function loadAdmin() {
       document.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.add('hidden'));
       tab.classList.add('active');
       $('admin-tab-' + tab.dataset.tab).classList.remove('hidden');
+      if (tab.dataset.tab === 'prepare' && typeof loadPrepareForAuction === 'function') {
+        loadPrepareForAuction();
+      }
     });
   });
+ 
+  if (typeof wireLockButton === 'function') wireLockButton();
  
   // Reports tab — wire report buttons to the admin-tab output divs
   document.querySelectorAll('#admin-tab-reports [data-report]').forEach(btn => {

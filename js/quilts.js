@@ -86,6 +86,11 @@ $('btn-quilt-delete').addEventListener('click', async () => {
 $('btn-save-quilt').addEventListener('click', saveQuilt);
  
 async function saveQuilt() {
+  await loadLockState();
+  if (dataLocked) {
+    setError($('quilt-form-error'), 'Data is locked for the auction. Unlock it in Admin → Prepare for Auction to make changes.');
+    return;
+  }
   const name    = $('qf-name').value.trim();
   const piecer  = $('qf-piecer').value.trim();
   const quilter = $('qf-quilter').value.trim();
@@ -204,6 +209,15 @@ async function loadQuilts() {
   allQuilts = data || [];
   renderQuiltList(allQuilts, error);
   populateBidQuiltSelect();
+  applyQuiltLockState();
+}
+ 
+function applyQuiltLockState() {
+  toggle($('quilts-lock-notice'), !!dataLocked);
+  $('btn-quilt-add').disabled = !!dataLocked;
+  const hasSelection = !!selectedQuiltId;
+  $('btn-quilt-modify').disabled = dataLocked || !hasSelection;
+  $('btn-quilt-delete').disabled = dataLocked || !hasSelection;
 }
  
 function renderQuiltList(quilts, error) {
@@ -240,8 +254,8 @@ function setQuiltSelection(id) {
   selectedQuiltId = id;
   highlightSelectedRow();
   const hasSelection = !!id;
-  $('btn-quilt-modify').disabled = !hasSelection;
-  $('btn-quilt-delete').disabled = !hasSelection;
+  $('btn-quilt-modify').disabled = dataLocked || !hasSelection;
+  $('btn-quilt-delete').disabled = dataLocked || !hasSelection;
   if (!hasSelection) {
     hide($('quilt-form-wrap'));
     resetQuiltForm();
@@ -290,6 +304,8 @@ function startEditQuilt(id) {
 // ── Delete quilt ──────────────────────────────────────────────
  
 async function deleteQuilt(id, name) {
+  await loadLockState();
+  if (dataLocked) { alert('Data is locked for the auction. Unlock it first to delete quilts.'); return; }
   const ok = await confirmDelete(`Delete quilt "${name}"? This cannot be undone.`);
   if (!ok) return;
   await sb.from('quilts').delete().eq('id', id);
