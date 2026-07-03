@@ -1,17 +1,17 @@
 // ── Checkout: payment + quilt delivery ───────────────────────
-
+ 
 let checkoutBidder  = null;
 let checkoutRecord  = null;
 let checkoutQuilts  = [];   // won quilts for this bidder
 let paymentLineCount = 0;
-
+ 
 function resetCheckout() {
   stopAllScanners();
   checkoutBidder   = null;
   checkoutRecord   = null;
   checkoutQuilts   = [];
   paymentLineCount = 0;
-
+ 
   $('checkout-bidder-num').value = '';
   setError($('checkout-lookup-error'), '');
   hide($('checkout-scan-wrap'));
@@ -19,9 +19,9 @@ function resetCheckout() {
   hide($('checkout-step-3'));
   show($('checkout-step-1'));
 }
-
+ 
 // ── Step 1: Identify bidder ───────────────────────────────────
-
+ 
 $('btn-checkout-lookup').addEventListener('click', async () => {
   const num = parseInt($('checkout-bidder-num').value);
   if (!num || num < 1) {
@@ -30,49 +30,66 @@ $('btn-checkout-lookup').addEventListener('click', async () => {
   }
   await lookupBidderForCheckout(num);
 });
-
+ 
 $('checkout-bidder-num').addEventListener('keydown', e => {
   if (e.key === 'Enter') $('btn-checkout-lookup').click();
 });
-
+ 
 $('btn-checkout-scan').addEventListener('click', async () => {
   show($('checkout-scan-wrap'));
   const started = await startScanner('checkout-video', async value => {
     stopScanner('checkout-video');
     hide($('checkout-scan-wrap'));
-    const num = parseInt(value);
-    if (!isNaN(num) && num > 0) {
+ 
+    const raw = String(value).trim();
+    const num = parseInt(raw);
+ 
+    // Case 1: QR encodes a plain bidder number (from the bidder "Show QR")
+    if (!isNaN(num) && num > 0 && String(num) === raw) {
       $('checkout-bidder-num').value = num;
       await lookupBidderForCheckout(num);
+      return;
+    }
+ 
+    // Case 2: QR is a printed bidder-card token (QA-…) — look up its number
+    const { data: card } = await sb
+      .from('bidder_cards')
+      .select('card_number')
+      .eq('qr_token', raw)
+      .maybeSingle();
+ 
+    if (card && card.card_number) {
+      $('checkout-bidder-num').value = card.card_number;
+      await lookupBidderForCheckout(card.card_number);
     } else {
-      setError($('checkout-lookup-error'), `QR code "${value}" is not a valid bidder number.`);
+      setError($('checkout-lookup-error'), `QR code "${raw}" is not a recognised bidder card.`);
     }
   });
   if (!started) hide($('checkout-scan-wrap'));
 });
-
+ 
 $('btn-checkout-scan-stop').addEventListener('click', () => {
   stopScanner('checkout-video');
   hide($('checkout-scan-wrap'));
 });
-
+ 
 async function lookupBidderForCheckout(bidderNumber) {
   setError($('checkout-lookup-error'), '');
   $('btn-checkout-lookup').disabled = true;
-
+ 
   const bidder = await getBidderByNumber(bidderNumber);
   if (!bidder) {
     setError($('checkout-lookup-error'), `Bidder #${bidderNumber} not found.`);
     $('btn-checkout-lookup').disabled = false;
     return;
   }
-
+ 
   // Load finalized bids for this bidder
   const { data: bids } = await sb.from('bid_records')
     .select('*, quilts(id, quilt_number, name)')
     .eq('resolved_bidder_id', bidder.id)
     .eq('is_finalized', true);
-
+ 
   checkoutBidder = bidder;
   checkoutQuilts = (bids || []).map(b => ({
     quiltId:     b.quilts.id,
@@ -81,32 +98,32 @@ async function lookupBidderForCheckout(bidderNumber) {
     amount:      b.resolved_bid,
     bidRecordId: b.id,
   }));
-
+ 
   // Load or create checkout record
   const { data: existing } = await sb.from('checkout_records')
     .select('*').eq('bidder_id', bidder.id).maybeSingle();
-
+ 
   if (existing && existing.checkout_confirmed) {
     setError($('checkout-lookup-error'), `Bidder #${bidderNumber} has already checked out.`);
     $('btn-checkout-lookup').disabled = false;
     return;
   }
-
+ 
   checkoutRecord = existing || null;
   $('btn-checkout-lookup').disabled = false;
   renderCheckoutStep2();
 }
-
+ 
 // ── Step 2: Payment ───────────────────────────────────────────
-
+ 
 function renderCheckoutStep2() {
   hide($('checkout-step-1'));
   hide($('checkout-step-3'));
   show($('checkout-step-2'));
-
+ 
   $('co-bidder-name').textContent = checkoutBidder.name;
   $('co-bidder-num').textContent  = `Bidder #${checkoutBidder.bidder_number}`;
-
+ 
   // Won quilts table
   const totalDue = checkoutQuilts.reduce((s, q) => s + q.amount, 0);
   $('co-quilts-list').innerHTML = checkoutQuilts.length === 0
@@ -119,15 +136,15 @@ function renderCheckoutStep2() {
           </div>
           <div class="text-accent fw-bold" style="margin-left:auto">${fmtMoney(q.amount)}</div>
         </div>`).join('');
-
+ 
   $('co-total-due').textContent = fmtMoney(totalDue);
-
+ 
   // Reset payment lines
   paymentLineCount = 0;
   $('co-payment-lines').innerHTML = '';
   hide($('co-payment-mismatch'));
   setError($('checkout-payment-error'), '');
-
+ 
   // Pre-populate from existing checkout record if applicable
   if (checkoutRecord) {
     loadExistingPaymentLines();
@@ -135,9 +152,9 @@ function renderCheckoutStep2() {
     addPaymentLine();
   }
 }
-
+ 
 $('btn-checkout-back').addEventListener('click', resetCheckout);
-
+ 
 async function loadExistingPaymentLines() {
   const { data: lines } = await sb.from('payment_lines')
     .select('*').eq('checkout_record_id', checkoutRecord.id);
@@ -148,9 +165,9 @@ async function loadExistingPaymentLines() {
   }
   recalcRemitted();
 }
-
+ 
 $('btn-add-payment-line').addEventListener('click', () => addPaymentLine());
-
+ 
 function addPaymentLine(amount, method) {
   paymentLineCount++;
   const lineId = 'pl-' + paymentLineCount;
@@ -174,26 +191,26 @@ function addPaymentLine(amount, method) {
     recalcRemitted();
   });
 }
-
+ 
 function recalcRemitted() {
   let total = 0;
   document.querySelectorAll('.pl-amount').forEach(inp => {
     total += parseFloat(inp.value) || 0;
   });
   $('co-amount-remitted').textContent = fmtMoney(total);
-
+ 
   const due = checkoutQuilts.reduce((s, q) => s + q.amount, 0);
   const mismatch = Math.abs(total - due) > 0.001;
   toggle($('co-payment-mismatch'), mismatch);
 }
-
+ 
 // ── Confirm checkout ──────────────────────────────────────────
-
+ 
 $('btn-confirm-checkout').addEventListener('click', async () => {
   const lines = [];
   const lineRows = document.querySelectorAll('.payment-line-row');
   let remitted = 0;
-
+ 
   for (const row of lineRows) {
     const method = row.querySelector('.pl-method').value;
     const amount = parseFloat(row.querySelector('.pl-amount').value);
@@ -204,27 +221,27 @@ $('btn-confirm-checkout').addEventListener('click', async () => {
     remitted += amount;
     lines.push({ method, amount });
   }
-
+ 
   if (lines.length === 0) {
     setError($('checkout-payment-error'), 'Enter at least one payment line.');
     return;
   }
-
+ 
   const totalDue = checkoutQuilts.reduce((s, q) => s + q.amount, 0);
   const mismatch = Math.abs(remitted - totalDue) > 0.001;
-
+ 
   if (mismatch) {
     setError($('checkout-payment-error'), 'Amount entered does not match total due. Resolve before confirming.');
     return;
   }
-
+ 
   setError($('checkout-payment-error'), '');
   $('btn-confirm-checkout').disabled = true;
   $('btn-confirm-checkout').textContent = 'Saving…';
-
+ 
   // Upsert checkout record
   let recId = checkoutRecord?.id;
-
+ 
   if (!recId) {
     const { data: newRec, error } = await sb.from('checkout_records').insert({
       bidder_id:        checkoutBidder.id,
@@ -235,7 +252,7 @@ $('btn-confirm-checkout').addEventListener('click', async () => {
       confirmed_by:     currentUser.id,
       confirmed_at:     new Date().toISOString(),
     }).select().single();
-
+ 
     if (error || !newRec) {
       setError($('checkout-payment-error'), 'Could not save checkout: ' + (error?.message || ''));
       $('btn-confirm-checkout').disabled = false;
@@ -256,12 +273,12 @@ $('btn-confirm-checkout').addEventListener('click', async () => {
     // Remove old payment lines
     await sb.from('payment_lines').delete().eq('checkout_record_id', recId);
   }
-
+ 
   // Insert payment lines
   await sb.from('payment_lines').insert(
     lines.map(l => ({ checkout_record_id: recId, amount: l.amount, method: l.method }))
   );
-
+ 
   // Create quilt delivery rows
   for (const q of checkoutQuilts) {
     await sb.from('quilt_deliveries').upsert({
@@ -270,34 +287,34 @@ $('btn-confirm-checkout').addEventListener('click', async () => {
       delivered:          false,
     }, { onConflict: 'checkout_record_id,quilt_id' });
   }
-
+ 
   $('btn-confirm-checkout').disabled = false;
   $('btn-confirm-checkout').textContent = 'Confirm checkout';
-
+ 
   renderDeliveryStep(recId);
 });
-
+ 
 // ── Step 3: Quilt delivery ────────────────────────────────────
-
+ 
 async function renderDeliveryStep(checkoutRecordId) {
   hide($('checkout-step-1'));
   show($('checkout-step-2'));
   show($('checkout-step-3'));
-
+ 
   await refreshDeliveryList(checkoutRecordId);
 }
-
+ 
 async function refreshDeliveryList(checkoutRecordId) {
   const { data: deliveries } = await sb.from('quilt_deliveries')
     .select('*, quilts(quilt_number, name)')
     .eq('checkout_record_id', checkoutRecordId);
-
+ 
   const wrap = $('co-delivery-list');
   if (!deliveries || deliveries.length === 0) {
     wrap.innerHTML = '<div class="text-muted">No quilts to deliver.</div>';
     return;
   }
-
+ 
   wrap.innerHTML = deliveries.map(d => `
     <div class="flex-center gap-8" style="padding:8px 0;border-bottom:1px solid var(--rule)">
       <div>
@@ -311,7 +328,7 @@ async function refreshDeliveryList(checkoutRecordId) {
       </div>
     </div>`).join('');
 }
-
+ 
 // Delivery QR scan
 $('btn-delivery-scan').addEventListener('click', async () => {
   show($('delivery-scan-wrap'));
@@ -323,12 +340,12 @@ $('btn-delivery-scan').addEventListener('click', async () => {
   });
   if (!started) hide($('delivery-scan-wrap'));
 });
-
+ 
 $('btn-delivery-scan-stop').addEventListener('click', () => {
   stopScanner('delivery-video');
   hide($('delivery-scan-wrap'));
 });
-
+ 
 async function markQuiltDelivered(rawValue) {
   const quiltNumber = parseInt(rawValue);
   if (isNaN(quiltNumber)) {
@@ -337,25 +354,25 @@ async function markQuiltDelivered(rawValue) {
     show($('delivery-scan-feedback'));
     return;
   }
-
+ 
   // Find the quilt
   const { data: quilt } = await sb.from('quilts')
     .select('id, quilt_number, name').eq('quilt_number', quiltNumber).maybeSingle();
-
+ 
   if (!quilt) {
     $('delivery-scan-feedback').textContent = `Quilt #${quiltNumber} not found.`;
     $('delivery-scan-feedback').className = 'form-error';
     show($('delivery-scan-feedback'));
     return;
   }
-
+ 
   // Update delivery record
   const { error } = await sb.from('quilt_deliveries').update({
     delivered:    true,
     delivered_at: new Date().toISOString(),
   }).eq('checkout_record_id', checkoutRecord.id)
     .eq('quilt_id', quilt.id);
-
+ 
   if (error) {
     $('delivery-scan-feedback').textContent = `Error marking delivered: ${error.message}`;
     $('delivery-scan-feedback').className = 'form-error';
@@ -364,6 +381,6 @@ async function markQuiltDelivered(rawValue) {
     $('delivery-scan-feedback').className = 'form-success';
   }
   show($('delivery-scan-feedback'));
-
+ 
   await refreshDeliveryList(checkoutRecord.id);
 }
