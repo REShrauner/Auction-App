@@ -34,12 +34,35 @@ async function reportBidderSummary(outputEl) {
     return;
   }
  
+  // Fetch checkout records and payment lines separately (flat queries,
+  // matching the pattern used elsewhere), then stitch together by bidder.
+  const { data: checkouts } = await sb.from('checkout_records')
+    .select('id, bidder_id, checkout_confirmed');
+ 
+  const recIdToBidder = {};
+  const paymentsByBidder = {};
+  (checkouts || []).forEach(c => {
+    recIdToBidder[c.id] = c.bidder_id;
+    paymentsByBidder[c.bidder_id] = { confirmed: c.checkout_confirmed, lines: [] };
+  });
+ 
+  const { data: payLines } = await sb.from('payment_lines')
+    .select('checkout_record_id, method, amount');
+ 
+  (payLines || []).forEach(l => {
+    const bidderId = recIdToBidder[l.checkout_record_id];
+    if (bidderId && paymentsByBidder[bidderId]) {
+      paymentsByBidder[bidderId].lines.push({ method: l.method, amount: l.amount });
+    }
+  });
+ 
   // Group by bidder
   const byBidder = {};
   bids.forEach(b => {
     const key = b.resolved_bidder_id;
     if (!byBidder[key]) {
       byBidder[key] = {
+        id:           key,
         name:         b.bidders?.name || '(unknown)',
         bidderNumber: b.bidders?.bidder_number,
         bids: [],
@@ -58,6 +81,37 @@ async function reportBidderSummary(outputEl) {
     ${sorted.map(bidder => {
       const subtotal = bidder.bids.reduce((s, b) => s + b.resolved_bid, 0);
       grandTotal += subtotal;
+ 
+      // Build the payment display for this bidder
+      const pay = paymentsByBidder[bidder.id];
+      const methodLabels = { cash: 'Cash', check: 'Check', 'credit card': 'Credit card' };
+      let paymentRows = '';
+      if (!pay || !pay.confirmed || pay.lines.length === 0) {
+        paymentRows = `
+          <tr>
+            <td colspan="3" class="text-faint" style="padding-top:6px;font-style:italic">Not checked out yet</td>
+          </tr>`;
+      } else {
+        paymentRows = pay.lines.map(l => `
+          <tr>
+            <td colspan="2" class="text-right text-muted" style="padding-top:4px">Paid — ${methodLabels[l.method] || esc(l.method)}</td>
+            <td class="text-right text-muted" style="padding-top:4px">${fmtMoney(l.amount)}</td>
+          </tr>`).join('');
+ 
+        // Flag any mismatch between total paid and the subtotal owed
+        const totalPaid = pay.lines.reduce((s, l) => s + Number(l.amount || 0), 0);
+        const diff = totalPaid - subtotal;
+        if (Math.abs(diff) > 0.001) {
+          const label = diff < 0
+            ? `Underpaid by ${fmtMoney(Math.abs(diff))}`
+            : `Overpaid by ${fmtMoney(diff)}`;
+          paymentRows += `
+            <tr>
+              <td colspan="3" class="text-right fw-bold" style="padding-top:4px;color:var(--needs)">⚠ ${label}</td>
+            </tr>`;
+        }
+      }
+ 
       return `
         <div class="report-section">
           <div class="report-section-heading">
@@ -83,6 +137,7 @@ async function reportBidderSummary(outputEl) {
                   <td colspan="2" class="fw-bold text-right" style="padding-top:10px">Subtotal</td>
                   <td class="fw-bold text-right text-accent" style="padding-top:10px">${fmtMoney(subtotal)}</td>
                 </tr>
+                ${paymentRows}
               </tbody>
             </table>
           </div>
