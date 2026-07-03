@@ -33,6 +33,9 @@
   --accent-20: color-mix(in srgb, var(--accent) 20%, transparent);
   --accent-30: color-mix(in srgb, var(--accent) 30%, transparent);
   --accent-50: color-mix(in srgb, var(--accent) 50%, transparent);
+
+  /* Semantic: teal container behind list-first layouts (theme-aware) */
+  --list-accent: color-mix(in srgb, var(--accent) 45%, white);
  
   /* Typography */
   --sans: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
@@ -976,7 +979,7 @@ tr:hover td { background: var(--glass); }
   margin-bottom: 12px;
   min-height: 80px;
   max-height: clamp(200px, 50vh, 480px);
-  background: #96C5BE;
+  background: var(--list-accent);
 }
  
 .quilt-list-row.bid-finalized {
@@ -1053,7 +1056,7 @@ tr:hover td { background: var(--glass); }
   margin-bottom: 12px;
   min-height: 80px;
   max-height: clamp(200px, 50vh, 480px);
-  background: #96C5BE;
+  background: var(--list-accent);
 }
  
 .quilt-list-row {

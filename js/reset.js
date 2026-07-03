@@ -16,7 +16,7 @@ $('btn-reset-full-cancel').addEventListener('click', () => {
 
 $('btn-reset-full-go').addEventListener('click', async () => {
   if ($('reset-full-input').value.trim() !== 'RESET') {
-    $('reset-full-input').style.borderColor = '#B83A3A';
+    $('reset-full-input').style.borderColor = 'var(--needs)';
     $('reset-full-input').focus();
     setError($('reset-full-error'), 'Type RESET in capitals to confirm.');
     return;
@@ -70,7 +70,7 @@ $('btn-reset-keep-cancel').addEventListener('click', () => {
 
 $('btn-reset-keep-go').addEventListener('click', async () => {
   if ($('reset-keep-input').value.trim() !== 'RESET') {
-    $('reset-keep-input').style.borderColor = '#B83A3A';
+    $('reset-keep-input').style.borderColor = 'var(--needs)';
     $('reset-keep-input').focus();
     setError($('reset-keep-error'), 'Type RESET in capitals to confirm.');
     return;

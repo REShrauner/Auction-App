@@ -268,7 +268,7 @@ $('btn-delete-all-cancel').addEventListener('click', () => {
  
 $('btn-delete-all-go').addEventListener('click', async () => {
   if ($('delete-all-input').value.trim() !== 'DELETE') {
-    $('delete-all-input').style.borderColor = '#B83A3A';
+    $('delete-all-input').style.borderColor = 'var(--needs)';
     $('delete-all-input').focus();
     return;
   }

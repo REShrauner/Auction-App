@@ -82,9 +82,9 @@ function renderBidQuiltList(term) {
     const partial   = r && !finalized && !mismatch;
 
     let badge = '';
-    if (finalized)     badge = ' <span style="color:#2C8A7C;font-weight:700">✓</span>';
-    else if (mismatch) badge = ' <span style="color:#B83A3A;font-weight:700">!</span>';
-    else if (partial)  badge = ' <span style="color:#888">…</span>';
+    if (finalized)     badge = ' <span style="color:var(--accent-dim);font-weight:700">✓</span>';
+    else if (mismatch) badge = ' <span style="color:var(--needs);font-weight:700">!</span>';
+    else if (partial)  badge = ' <span style="color:var(--text-faint)">…</span>';
 
     return `
       <div class="quilt-list-row${finalized ? ' bid-finalized' : ''}"
@@ -270,7 +270,7 @@ function populateIfIdle(id, value) {
 
 function setFieldColor(el, matches) {
   if (!el) return;
-  el.style.borderColor = matches ? '#2C8A7C' : '#B83A3A';
+  el.style.borderColor = matches ? 'var(--accent-dim)' : 'var(--needs)';
   el.style.borderWidth = '2px';
   el.style.outline     = 'none';
 }
