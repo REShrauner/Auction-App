@@ -27,12 +27,20 @@ function wireLockButton() {
 }
 
 async function setLockState(locked) {
-  await sb.from('app_settings').update({
+  const { error } = await sb.from('app_settings').upsert({
+    id:          1,
     data_locked: locked,
     locked_at:   locked ? new Date().toISOString() : null,
     locked_by:   locked ? currentUser?.id : null,
-  }).eq('id', 1);
+  }, { onConflict: 'id' });
+
+  if (error) {
+    alert('Could not update the lock state: ' + error.message + '\n\nPlease try again.');
+    await loadLockState();
+    return false;
+  }
   dataLocked = locked;
+  return true;
 }
 
 async function loadPrepareForAuction() {

@@ -5,7 +5,15 @@ let currentProfile = null;
 let dataLocked      = false;
 
 async function loadLockState() {
-  const { data } = await sb.from('app_settings').select('data_locked').eq('id', 1).single();
+  const { data, error } = await sb.from('app_settings').select('data_locked').eq('id', 1).maybeSingle();
+
+  // Self-heal: if the singleton settings row is missing, recreate it (unlocked)
+  if (!error && !data) {
+    await sb.from('app_settings').insert({ id: 1, data_locked: false });
+    dataLocked = false;
+    return dataLocked;
+  }
+
   dataLocked = !!data?.data_locked;
   return dataLocked;
 }

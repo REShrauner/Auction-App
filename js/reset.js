@@ -37,6 +37,12 @@ $('btn-reset-full-go').addEventListener('click', async () => {
     await sb.from('bidder_cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await sb.from('bidders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
+    // Return to an editable state: unlock data
+    await sb.from('app_settings').upsert({
+      id: 1, data_locked: false, locked_at: null, locked_by: null
+    }, { onConflict: 'id' });
+    dataLocked = false;
+
     hide($('reset-full-confirm'));
     $('reset-full-input').value = '';
     alert('Full reset complete. All auction data has been deleted.');
@@ -86,6 +92,12 @@ $('btn-reset-keep-go').addEventListener('click', async () => {
 
     // Clear bidder numbers but keep contact info
     await sb.from('bidders').update({ bidder_number: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+
+    // Return to an editable state: unlock data
+    await sb.from('app_settings').upsert({
+      id: 1, data_locked: false, locked_at: null, locked_by: null
+    }, { onConflict: 'id' });
+    dataLocked = false;
 
     hide($('reset-keep-confirm'));
     $('reset-keep-input').value = '';

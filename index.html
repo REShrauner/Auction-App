@@ -448,6 +448,7 @@
         <button class="admin-tab" data-tab="appearance">Appearance</button>
         <button class="admin-tab" data-tab="prepare">Prepare for Auction</button>
         <button class="admin-tab" data-tab="reports">Reports</button>
+        <button class="admin-tab" data-tab="reset">Reset</button>
       </div>
  
       <!-- ── Accounts tab ── -->
@@ -606,6 +607,52 @@
           <button id="btn-print-admin-report" class="btn btn-primary">Print / Save PDF</button>
         </div>
       </div>
+
+      <!-- ── Reset tab ── -->
+      <div class="admin-tab-panel hidden" id="admin-tab-reset">
+        <h3 class="page-heading" style="font-size:var(--fs-xl)">Reset database</h3>
+        <div class="alert alert-needs mb-16">
+          These actions permanently delete auction data and cannot be undone. Use them only when starting fresh.
+        </div>
+
+        <!-- Full reset -->
+        <div class="card mb-16">
+          <div class="fw-bold" style="font-size:var(--fs-lg);margin-bottom:6px">Full reset</div>
+          <div class="text-muted" style="font-size:var(--fs-sm);margin-bottom:12px">
+            Deletes all quilts, bidders, bidder cards, bids, checkouts, and payments. Nothing is kept.
+          </div>
+          <button id="btn-reset-full" class="btn btn-danger">Full reset…</button>
+
+          <div id="reset-full-confirm" class="hidden mt-16">
+            <label for="reset-full-input">Type <strong>RESET</strong> to confirm full deletion:</label>
+            <input type="text" id="reset-full-input" autocomplete="off" style="max-width:200px;margin-top:6px">
+            <div id="reset-full-error" class="form-error hidden mt-4"></div>
+            <div class="flex gap-8 mt-16">
+              <button id="btn-reset-full-go" class="btn btn-danger">Confirm Full Reset</button>
+              <button id="btn-reset-full-cancel" class="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Keep-contacts reset -->
+        <div class="card">
+          <div class="fw-bold" style="font-size:var(--fs-lg);margin-bottom:6px">Reset but keep bidder contacts</div>
+          <div class="text-muted" style="font-size:var(--fs-sm);margin-bottom:12px">
+            Deletes quilts, bids, checkouts, payments, and cards, and clears bidder numbers — but keeps bidder names and contact info for reuse next year.
+          </div>
+          <button id="btn-reset-keep" class="btn btn-danger">Reset (keep contacts)…</button>
+
+          <div id="reset-keep-confirm" class="hidden mt-16">
+            <label for="reset-keep-input">Type <strong>RESET</strong> to confirm:</label>
+            <input type="text" id="reset-keep-input" autocomplete="off" style="max-width:200px;margin-top:6px">
+            <div id="reset-keep-error" class="form-error hidden mt-4"></div>
+            <div class="flex gap-8 mt-16">
+              <button id="btn-reset-keep-go" class="btn btn-danger">Confirm Reset</button>
+              <button id="btn-reset-keep-cancel" class="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
  
     </div>
  
@@ -667,5 +714,6 @@
   <script src="js/bids.js"></script>
   <script src="js/checkout.js"></script>
   <script src="js/reports.js"></script>
+  <script src="js/reset.js"></script>
 </body>
 </html>
