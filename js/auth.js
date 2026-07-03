@@ -243,7 +243,7 @@ async function approveRequest({ reqId, name, username, password }) {
 }
  
 async function rejectRequest(reqId) {
-  const ok = await confirmDelete('Reject and discard this account request?');
+  const ok = await confirmDelete('Reject and discard this account request?', 'Reject', 'btn btn-danger');
   if (!ok) return;
   await sb.from('account_requests').delete().eq('id', reqId);
   loadPendingRequests();

@@ -10,13 +10,15 @@ function wireLockButton() {
 
     if (dataLocked) {
       const ok = await confirmDelete(
-        'Unlock data? This will allow quilts and bidders to be modified again, and the Bids page will become unavailable until data is locked again.'
+        'Unlock data? This will allow quilts and bidders to be modified again, and the Bids page will become unavailable until data is locked again.',
+        'Unlock data', 'btn btn-accent'
       );
       if (!ok) return;
       await setLockState(false);
     } else {
       const ok = await confirmDelete(
-        'Lock data? Quilts and bidders cannot be added, modified, or deleted while locked, and the Bids page will become available.'
+        'Lock data? Quilts and bidders cannot be added, modified, or deleted while locked, and the Bids page will become available.',
+        'Lock data', 'btn btn-accent'
       );
       if (!ok) return;
       await setLockState(true);

@@ -1,284 +1,372 @@
-// ── App router + session management ──────────────────────────
+// ── Auth: login, account request, admin approval ──────────────
  
-let currentUser    = null;
-let currentProfile = null;
-let dataLocked      = false;
-
-async function loadLockState() {
-  const { data, error } = await sb.from('app_settings').select('data_locked').eq('id', 1).maybeSingle();
-
-  // Self-heal: if the singleton settings row is missing, recreate it (unlocked)
-  if (!error && !data) {
-    await sb.from('app_settings').insert({ id: 1, data_locked: false });
-    dataLocked = false;
-    return dataLocked;
-  }
-
-  dataLocked = !!data?.data_locked;
-  return dataLocked;
-}
+// ── Login / Request tab switching ────────────────────────────
  
-// ── Helpers ───────────────────────────────────────────────────
+document.querySelectorAll('.login-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
  
-function $(id) { return document.getElementById(id); }
- 
-function show(el) { if (el) el.classList.remove('hidden'); }
-function hide(el) { if (el) el.classList.add('hidden'); }
-function toggle(el, on) { on ? show(el) : hide(el); }
- 
-function setError(el, msg) {
-  if (!el) return;
-  el.textContent = msg;
-  toggle(el, !!msg);
-}
- 
-function fmtMoney(n) {
-  return '$' + Number(n || 0).toFixed(2);
-}
- 
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
- 
-// Confirm-delete modal
-let _confirmResolve = null;
-function confirmDelete(msg) {
-  return new Promise(resolve => {
-    _confirmResolve = resolve;
-    $('confirm-modal-msg').textContent = msg;
-    show($('confirm-modal'));
+    const which = tab.dataset.tab;
+    toggle($('login-form-panel'),   which === 'login');
+    toggle($('request-form-panel'), which === 'request');
+    setError($('login-error'), '');
+    setError($('request-error'), '');
+    hide($('request-success'));
   });
+});
+ 
+// ── Sign in ───────────────────────────────────────────────────
+ 
+function usernameToEmail(username) {
+  // Supabase auth requires an email; we map username → username@quiltauction.com
+  return username.trim().toLowerCase() + '@quiltauction.com';
 }
  
-$('btn-confirm-yes').addEventListener('click', () => {
-  hide($('confirm-modal'));
-  if (_confirmResolve) { _confirmResolve(true); _confirmResolve = null; }
-});
-$('btn-confirm-no').addEventListener('click', () => {
-  hide($('confirm-modal'));
-  if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
-});
+$('btn-login').addEventListener('click', async () => {
+  const username = $('login-username').value.trim();
+  const password = $('login-password').value;
  
-// ── Screen routing ────────────────────────────────────────────
- 
-const SCREENS = ['login','home','quilts','bidders','bids','checkout','reports','admin'];
- 
-async function showScreen(name) {
-  // Block access to screens the user doesn't have a role for
-  const restricted = ['quilts','bidders','bids','checkout','reports','admin'];
-  if (restricted.includes(name) && !userCanAccess(name)) {
+  if (!username || !password) {
+    setError($('login-error'), 'Enter your username and password.');
     return;
   }
  
-  SCREENS.forEach(s => {
-    const el = $('screen-' + s);
-    if (el) el.classList.toggle('active', s === name);
-  });
-  document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.screen === name);
+  $('btn-login').disabled = true;
+  $('btn-login').textContent = 'Signing in…';
+  setError($('login-error'), '');
+ 
+  const { error } = await sb.auth.signInWithPassword({
+    email:    usernameToEmail(username),
+    password: password,
   });
  
-  if (['quilts','bidders','bids','admin'].includes(name)) {
-    await loadLockState();
+  $('btn-login').disabled = false;
+  $('btn-login').textContent = 'Sign in';
+ 
+  if (error) {
+    setError($('login-error'), 'Username or password is incorrect.');
+  }
+});
+ 
+$('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-login').click();
+});
+ 
+// ── Account request ────────────────────────────────────────────
+ 
+function validatePassword(pw) {
+  if (pw.length < 8)          return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(pw))      return 'Password must contain at least one uppercase letter.';
+  if (!/[0-9]/.test(pw))      return 'Password must contain at least one number.';
+  return null;
+}
+ 
+$('btn-request').addEventListener('click', async () => {
+  const fullName = $('req-name').value.trim();
+  const username = $('req-username').value.trim();
+  const password = $('req-password').value;
+ 
+  setError($('request-error'), '');
+  hide($('request-success'));
+ 
+  if (!fullName || !username || !password) {
+    setError($('request-error'), 'All fields are required.');
+    return;
   }
  
-  // Trigger screen-specific refresh
-  if (name === 'home')      { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); }
-  if (name === 'quilts')    { if (typeof loadQuilts   === 'function') loadQuilts(); }
-  if (name === 'bidders')   { if (typeof loadBidders  === 'function') loadBidders(); }
-  if (name === 'bids')      { if (typeof initBids     === 'function') initBids(); }
-  if (name === 'checkout')  { if (typeof resetCheckout=== 'function') resetCheckout(); }
-  if (name === 'reports')   { $('report-output').innerHTML = ''; hide($('report-actions')); }
-  if (name === 'admin')     { if (typeof loadAdmin    === 'function') loadAdmin(); }
-}
+  const pwError = validatePassword(password);
+  if (pwError) { setError($('request-error'), pwError); return; }
  
-// Nav clicks
-document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
-  btn.addEventListener('click', () => showScreen(btn.dataset.screen));
-});
+  $('btn-request').disabled = true;
+  $('btn-request').textContent = 'Submitting…';
  
-// ── Auth state management ─────────────────────────────────────
+  // Check username not already taken
+  const { data: existing } = await sb.from('account_requests').select('id').eq('username', username);
+  const { data: existingProfile } = await sb.from('profiles').select('id').eq('username', username);
  
-async function loadProfile(userId) {
-  const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
-  return data;
-}
+  if ((existing && existing.length > 0) || (existingProfile && existingProfile.length > 0)) {
+    setError($('request-error'), 'That username is already taken.');
+    $('btn-request').disabled = false;
+    $('btn-request').textContent = 'Submit request';
+    return;
+  }
  
-// ── Role helpers ──────────────────────────────────────────────
- 
-const ROLE_SCREEN_MAP = {
-  'quilt_entry':    'quilts',
-  'bidder_entry':   'bidders',
-  'documentarian1': 'bids',
-  'documentarian2': 'bids',
-  'checkout':       'checkout',
-};
- 
-function userCanAccess(screen) {
-  if (!currentProfile) return false;
-  if (currentProfile.is_admin) return true;
-  const roles = currentProfile.roles || [];
-  const allowed = Object.entries(ROLE_SCREEN_MAP)
-    .filter(([role]) => roles.includes(role))
-    .map(([, scr]) => scr);
-  return allowed.includes(screen);
-}
- 
-function applySession(user, profile) {
-  currentUser    = user;
-  currentProfile = profile;
- 
-  const isAdmin = profile?.is_admin;
-  const roles   = profile?.roles || [];
- 
-  hide($('screen-login'));
-  show($('app-nav'));
- 
-  // Show/hide nav buttons based on roles
-  document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
-    const screen = btn.dataset.screen;
-    const adminOnly = ['reports', 'admin'].includes(screen);
-    if (adminOnly) {
-      toggle(btn, isAdmin);
-    } else {
-      toggle(btn, isAdmin || userCanAccess(screen));
-    }
+  const { error } = await sb.from('account_requests').insert({
+    full_name: fullName,
+    username:  username,
+    password:  password,
   });
  
-  $('nav-user-info').textContent = profile?.username || user?.email || '';
+  $('btn-request').disabled = false;
+  $('btn-request').textContent = 'Submit request';
  
-  // Navigate to home dashboard
-  showScreen('home');
-}
- 
-function clearSession() {
-  currentUser    = null;
-  currentProfile = null;
-  hide($('app-nav'));
-  SCREENS.forEach(s => {
-    const el = $('screen-' + s);
-    if (el) el.classList.remove('active');
-  });
-  show($('screen-login'));
-}
- 
-// Sign-out
-$('nav-logout').addEventListener('click', async () => {
-  await sb.auth.signOut();
-  clearSession();
-});
- 
-// ── Theme controls ────────────────────────────────────────────
- 
-function applyMode(mode) {
-  document.documentElement.setAttribute('data-mode', mode);
-  localStorage.setItem('qa_mode', mode);
-}
- 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('qa_theme', theme);
-  // Mark active dot
-  document.querySelectorAll('.theme-dot').forEach(d => {
-    d.classList.toggle('active', d.dataset.theme === theme);
-  });
-}
- 
-$('btn-mode-dark').addEventListener('click',  () => applyMode('dark'));
-$('btn-mode-light').addEventListener('click', () => applyMode('light'));
- 
-document.querySelectorAll('.theme-dot').forEach(dot => {
-  dot.addEventListener('click', () => applyTheme(dot.dataset.theme));
-});
- 
-// Mark current theme dot on load
-applyTheme(localStorage.getItem('qa_theme') || 'teal');
- 
-// ── QR modal ──────────────────────────────────────────────────
- 
-function openQRModal(title, value, label) {
-  $('qr-modal-title').textContent = title;
-  $('qr-modal-label').textContent = label;
-  QRCode.toCanvas($('qr-modal-canvas'), String(value), { width: 220, margin: 1 });
-  show($('qr-modal'));
-}
- 
-$('btn-qr-close').addEventListener('click', () => hide($('qr-modal')));
-$('btn-qr-print').addEventListener('click', () => window.print());
-$('qr-modal').addEventListener('click', e => { if (e.target === $('qr-modal')) hide($('qr-modal')); });
- 
-// ── Home dashboard ───────────────────────────────────────────
- 
-const SCREEN_LABELS = {
-  quilts:   { label: 'Quilts',   icon: '🧵' },
-  bidders:  { label: 'Bidders',  icon: '🪪' },
-  bids:     { label: 'Bids',     icon: '✋' },
-  checkout: { label: 'Checkout', icon: '💳' },
-  reports:  { label: 'Reports',  icon: '📊' },
-  admin:    { label: 'Admin',    icon: '⚙️'  },
-};
- 
-const ROLE_DISPLAY = {
-  quilt_entry:    'Quilt Entry',
-  bidder_entry:   'Bidder Entry',
-  documentarian1: 'Documentarian 1',
-  documentarian2: 'Documentarian 2',
-  checkout:       'Checkout',
-};
- 
-function renderHomeDashboard() {
-  if (!currentProfile) return;
- 
-  const isAdmin = currentProfile.is_admin;
-  const roles   = currentProfile.roles || [];
-  const name    = currentProfile.full_name || currentProfile.username || '';
- 
-  $('home-welcome').textContent = `Welcome, ${name}!`;
- 
-  if (isAdmin) {
-    $('home-roles').textContent = 'Administrator';
+  if (error) {
+    setError($('request-error'), 'Could not submit request. Try again.');
   } else {
-    const roleNames = roles.map(r => ROLE_DISPLAY[r] || r).join(', ');
-    $('home-roles').textContent = roleNames || 'No roles assigned';
+    $('req-name').value = '';
+    $('req-username').value = '';
+    $('req-password').value = '';
+    show($('request-success'));
+    $('request-success').textContent = 'Request submitted. An admin will review it shortly.';
   }
+});
  
+// ── Admin: load pending requests + all accounts ───────────────
  
-}
- 
-// ── Boot ──────────────────────────────────────────────────────
- 
-async function boot() {
-  const { data: { session } } = await sb.auth.getSession();
- 
-  if (session?.user) {
-    const profile = await loadProfile(session.user.id);
-    if (profile?.is_approved) {
-      applySession(session.user, profile);
-    } else {
-      // Logged in but not yet approved
-      await sb.auth.signOut();
-      clearSession();
-      setError($('login-error'), 'Your account is pending admin approval.');
-      show($('screen-login'));
-    }
-  } else {
-    clearSession();
-  }
- 
-  // Listen for auth changes
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      const profile = await loadProfile(session.user.id);
-      if (profile?.is_approved) {
-        applySession(session.user, profile);
-      } else {
-        await sb.auth.signOut();
-        setError($('login-error'), 'Your account is pending admin approval.');
+async function loadAdmin() {
+  // Tab switching
+  document.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.add('hidden'));
+      tab.classList.add('active');
+      $('admin-tab-' + tab.dataset.tab).classList.remove('hidden');
+      if (tab.dataset.tab === 'prepare' && typeof loadPrepareForAuction === 'function') {
+        loadPrepareForAuction();
       }
-    } else if (event === 'SIGNED_OUT') {
-      clearSession();
-    }
+    });
+  });
+ 
+  if (typeof wireLockButton === 'function') wireLockButton();
+ 
+  // Reports tab — wire report buttons to the admin-tab output divs
+  document.querySelectorAll('#admin-tab-reports [data-report]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (typeof runReport === 'function') {
+        runReport(btn.dataset.report, $('admin-report-output'), $('admin-report-actions'));
+      }
+    });
+  });
+  $('btn-print-admin-report').addEventListener('click', () => window.print());
+ 
+  await loadPendingRequests();
+  await loadAllUsers();
+}
+ 
+const ROLE_LABELS = [
+  ['quilt_entry',    'Quilt entry'],
+  ['bidder_entry',   'Bidder entry'],
+  ['documentarian1', 'Documentarian 1'],
+  ['documentarian2', 'Documentarian 2'],
+  ['checkout',       'Checkout'],
+];
+ 
+async function loadPendingRequests() {
+  const { data: requests, error } = await sb
+    .from('account_requests')
+    .select('*')
+    .order('created_at', { ascending: true });
+ 
+  const wrap = $('admin-requests-list');
+ 
+  if (error || !requests || requests.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">No pending requests.</div>';
+    return;
+  }
+ 
+  wrap.innerHTML = requests.map(r => `
+    <div class="approval-card" data-req-id="${r.id}" style="flex-direction:column;align-items:flex-start;gap:12px">
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:flex-start">
+        <div>
+          <div class="approval-name">${esc(r.full_name)}</div>
+          <div class="approval-username text-muted">@${esc(r.username)}</div>
+          <div class="text-faint" style="font-size:var(--fs-xs)">${fmtDate(r.created_at)}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" data-action="reject" data-req-id="${r.id}">Reject</button>
+      </div>
+      <div style="width:100%">
+        <div style="font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Assign roles (select at least one)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+          ${ROLE_LABELS.map(([val, label]) => `
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--fs-md)">
+              <input type="checkbox" data-role="${val}" data-req-id="${r.id}" style="width:18px;height:18px;cursor:pointer">
+              ${label}
+            </label>
+          `).join('')}
+        </div>
+        <div id="role-error-${r.id}" style="color:var(--needs);font-size:var(--fs-md);display:none;margin-bottom:8px">Please select at least one role.</div>
+        <button class="btn btn-accent btn-sm" data-action="approve" data-req-id="${r.id}"
+          data-name="${esc(r.full_name)}" data-username="${esc(r.username)}" data-password="${esc(r.password)}">
+          Approve
+        </button>
+      </div>
+    </div>
+  `).join('');
+ 
+  wrap.querySelectorAll('[data-action="approve"]').forEach(btn => {
+    btn.addEventListener('click', () => approveRequest(btn.dataset));
+  });
+  wrap.querySelectorAll('[data-action="reject"]').forEach(btn => {
+    btn.addEventListener('click', () => rejectRequest(btn.dataset.reqId));
   });
 }
  
-boot();
+async function approveRequest({ reqId, name, username, password }) {
+  // Collect selected roles
+  const roleBoxes = document.querySelectorAll(`input[type="checkbox"][data-req-id="${reqId}"]`);
+  const roles = Array.from(roleBoxes).filter(cb => cb.checked).map(cb => cb.dataset.role);
+  const roleError = document.getElementById('role-error-' + reqId);
+  if (roles.length === 0) {
+    if (roleError) { roleError.style.display = 'block'; }
+    return;
+  }
+  if (roleError) { roleError.style.display = 'none'; }
+ 
+  const btn = document.querySelector(`[data-action="approve"][data-req-id="${reqId}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Approving…'; }
+ 
+  // Create the Supabase auth user via admin — we call a Supabase Edge Function
+  // that has service-role access. For now, use the workaround of signing up
+  // the user with their chosen credentials, then immediately approving.
+  // NOTE: This requires the "Disable email confirmations" setting in Supabase Auth.
+  // Call Edge Function to create user — bypasses email system entirely
+  const resp = await fetch('https://uoqscftixhpdznjjghpa.supabase.co/functions/v1/create-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, full_name: name, roles }),
+  });
+ 
+  const result = await resp.json();
+ 
+  if (!resp.ok || result.error) {
+    alert('Error creating account: ' + (result.error || 'Unknown error'));
+    if (btn) { btn.disabled = false; btn.textContent = 'Approve'; }
+    return;
+  }
+ 
+  // Delete the request
+  await sb.from('account_requests').delete().eq('id', reqId);
+ 
+  loadPendingRequests();
+  loadAllUsers();
+}
+ 
+async function rejectRequest(reqId) {
+  const ok = await confirmDelete('Reject and discard this account request?', 'Reject', 'btn btn-danger');
+  if (!ok) return;
+  await sb.from('account_requests').delete().eq('id', reqId);
+  loadPendingRequests();
+}
+ 
+async function loadAllUsers() {
+  const { data: users, error } = await sb
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: true });
+ 
+  const wrap = $('admin-users-list');
+  if (error || !users || users.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">No accounts yet.</div>';
+    return;
+  }
+ 
+  wrap.innerHTML = users.map(u => `
+    <div class="approval-card" style="flex-direction:column;align-items:flex-start;gap:10px">
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+        <div>
+          <div class="approval-name">@${esc(u.username)} <span style="font-weight:400;color:var(--text-muted)">${esc(u.full_name)}</span></div>
+          <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+            ${u.is_admin ? '<span class="badge badge-admin">Admin</span>' : '<span class="badge badge-muted">User</span>'}
+            ${u.is_approved ? '<span class="badge badge-ready">Approved</span>' : '<span class="badge badge-near">Pending</span>'}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${!u.is_admin && u.id !== currentUser?.id ? `
+            <button class="btn btn-secondary btn-sm" data-action="toggle-admin"
+              data-uid="${u.id}" data-current="${u.is_admin}">
+              ${u.is_admin ? 'Remove admin' : 'Make admin'}
+            </button>` : ''}
+          ${u.id !== currentUser?.id ? `
+            <button class="btn btn-danger btn-sm" data-action="delete-user"
+              data-uid="${u.id}" data-username="${esc(u.username)}" data-is-admin="${u.is_admin}">
+              Delete
+            </button>` : ''}
+        </div>
+      </div>
+      ${!u.is_admin ? `
+        <div style="width:100%">
+          <div style="font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Roles</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+            ${ROLE_LABELS.map(([val, label]) => `
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--fs-md)">
+                <input type="checkbox" data-role="${val}" data-uid="${u.id}" class="role-checkbox"
+                  style="width:18px;height:18px;cursor:pointer"
+                  ${(u.roles || []).includes(val) ? 'checked' : ''}>
+                ${label}
+              </label>
+            `).join('')}
+          </div>
+          <div id="role-save-error-${u.id}" style="color:var(--needs);font-size:var(--fs-md);display:none;margin-bottom:6px">Select at least one role.</div>
+          <button class="btn btn-accent btn-sm" data-action="save-roles" data-uid="${u.id}">Save roles</button>
+          <span id="role-save-ok-${u.id}" style="color:var(--ready);font-size:var(--fs-md);margin-left:10px;display:none">Saved!</span>
+        </div>` : ''}
+    </div>
+  `).join('');
+ 
+  wrap.querySelectorAll('[data-action="toggle-admin"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newVal = btn.dataset.current !== 'true';
+      await sb.from('profiles').update({ is_admin: newVal }).eq('id', btn.dataset.uid);
+      loadAllUsers();
+    });
+  });
+ 
+  wrap.querySelectorAll('[data-action="delete-user"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const { uid, username, isAdmin } = btn.dataset;
+ 
+      // Block deletion of last admin
+      if (isAdmin === 'true') {
+        const adminCount = users.filter(u => u.is_admin).length;
+        if (adminCount <= 1) {
+          alert('Cannot delete the last admin account.');
+          return;
+        }
+      }
+ 
+      const ok = await confirmDelete(`Delete account "@${username}"? This cannot be undone.`);
+      if (!ok) return;
+ 
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
+ 
+      const resp = await fetch('https://uoqscftixhpdznjjghpa.supabase.co/functions/v1/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', user_id: uid }),
+      });
+ 
+      const result = await resp.json();
+      if (!resp.ok || result.error) {
+        alert('Error deleting account: ' + (result.error || 'Unknown error'));
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        return;
+      }
+ 
+      loadAllUsers();
+    });
+  });
+ 
+  wrap.querySelectorAll('[data-action="save-roles"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const uid = btn.dataset.uid;
+      const boxes = wrap.querySelectorAll(`.role-checkbox[data-uid="${uid}"]`);
+      const roles = Array.from(boxes).filter(cb => cb.checked).map(cb => cb.dataset.role);
+      const errEl = document.getElementById('role-save-error-' + uid);
+      const okEl  = document.getElementById('role-save-ok-' + uid);
+      if (roles.length === 0) { errEl.style.display = 'inline'; return; }
+      errEl.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'Saving…';
+      await sb.from('profiles').update({ roles }).eq('id', uid);
+      btn.disabled = false; btn.textContent = 'Save roles';
+      okEl.style.display = 'inline';
+      setTimeout(() => { okEl.style.display = 'none'; }, 2000);
+    });
+  });
+}
+ 
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
