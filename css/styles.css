@@ -368,6 +368,27 @@ body {
   padding: 6px 12px;
   min-height: 38px;
 }
+
+/* Back navigation — consistent look/placement for any "step back to the
+   previous screen" control. Sits above the content it belongs to, on its
+   own line, so it reads as navigation rather than just another form button. */
+.btn-back {
+  background: var(--list-accent);
+  border-color: var(--rule-med);
+  color: var(--text);
+  font-weight: 700;
+  padding: 8px 14px;
+}
+.btn-back:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-back .back-arrow {
+  font-size: 1.15em;
+  line-height: 1;
+  transition: transform .15s;
+}
+.btn-back:hover:not(:disabled) .back-arrow { transform: translateX(-3px); }
  
 /* ── Forms ────────────────────────────────────────────────── */
 .form-card {
