@@ -64,11 +64,11 @@ $('btn-confirm-no').addEventListener('click', () => {
  
 // ── Screen routing ────────────────────────────────────────────
  
-const SCREENS = ['login','home','quilts','bidders','bids','checkout','reports','admin'];
- 
+const SCREENS = ['login','home','quilts','bidders','bids','checkout','delivery','reports','admin'];
+
 async function showScreen(name) {
   // Block access to screens the user doesn't have a role for
-  const restricted = ['quilts','bidders','bids','checkout','reports','admin'];
+  const restricted = ['quilts','bidders','bids','checkout','delivery','reports','admin'];
   if (restricted.includes(name) && !userCanAccess(name)) {
     return;
   }
@@ -91,6 +91,7 @@ async function showScreen(name) {
   if (name === 'bidders')   { if (typeof loadBidders  === 'function') loadBidders(); }
   if (name === 'bids')      { if (typeof initBids     === 'function') initBids(); }
   if (name === 'checkout')  { if (typeof resetCheckout=== 'function') resetCheckout(); }
+  if (name === 'delivery')  { if (typeof resetDelivery === 'function') resetDelivery(); }
   if (name === 'reports')   { $('report-output').innerHTML = ''; hide($('report-actions')); }
   if (name === 'admin')     { if (typeof loadAdmin    === 'function') loadAdmin(); }
 }
@@ -115,6 +116,7 @@ const ROLE_SCREEN_MAP = {
   'documentarian1': 'bids',
   'documentarian2': 'bids',
   'checkout':       'checkout',
+  'delivery':       'delivery',
 };
  
 function userCanAccess(screen) {
@@ -217,16 +219,18 @@ const SCREEN_LABELS = {
   bidders:  { label: 'Bidders',  icon: '🪪' },
   bids:     { label: 'Bids',     icon: '✋' },
   checkout: { label: 'Checkout', icon: '💳' },
+  delivery: { label: 'Delivery', icon: '🚚' },
   reports:  { label: 'Reports',  icon: '📊' },
   admin:    { label: 'Admin',    icon: '⚙️'  },
 };
- 
+
 const ROLE_DISPLAY = {
   quilt_entry:    'Quilt Entry',
   bidder_entry:   'Bidder Entry',
   documentarian1: 'Documentarian 1',
   documentarian2: 'Documentarian 2',
   checkout:       'Checkout',
+  delivery:       'Delivery',
 };
  
 function renderHomeDashboard() {

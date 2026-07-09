@@ -53,6 +53,7 @@
       <button class="nav-btn" data-screen="bidders"><i class="ti ti-id-badge" aria-hidden="true"></i><span>Bidders</span></button>
       <button class="nav-btn" data-screen="bids"><i class="ti ti-hand-stop" aria-hidden="true"></i><span>Bids</span></button>
       <button class="nav-btn" data-screen="checkout"><i class="ti ti-credit-card" aria-hidden="true"></i><span>Checkout</span></button>
+      <button class="nav-btn" data-screen="delivery"><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>Delivery</span></button>
       <button class="nav-btn admin-only hidden" data-screen="reports"><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Reports</span></button>
       <button class="nav-btn admin-only hidden" data-screen="admin"><i class="ti ti-settings" aria-hidden="true"></i><span>Admin</span></button>
     </div>
@@ -360,7 +361,7 @@
         <button id="btn-checkout-back" class="btn btn-back mb-16">
           <span class="back-arrow" aria-hidden="true">‹</span> Back to bidder lookup
         </button>
-        <div class="card mb-16">
+        <div class="card mb-16" id="co-quilts-card">
           <div class="flex-center gap-8 mb-16">
             <div>
               <div class="card-meta">Bidder</div>
@@ -368,21 +369,21 @@
               <div class="text-muted" id="co-bidder-num"></div>
             </div>
           </div>
- 
+
           <h3 class="page-heading" style="font-size:var(--fs-xl)">Won quilts</h3>
           <div id="co-quilts-list" class="mb-16"></div>
- 
+
           <div class="checkout-total">
             <span>Total due</span>
             <span class="amount" id="co-total-due">$0.00</span>
           </div>
         </div>
- 
-        <div class="card mb-16">
+
+        <div class="card mb-16" id="co-payment-card">
           <h3 class="page-heading" style="font-size:var(--fs-xl)">Payment</h3>
           <div id="co-payment-lines"></div>
           <button id="btn-add-payment-line" class="btn btn-secondary btn-sm mt-8">+ Add payment line</button>
- 
+
           <div class="checkout-total mt-16">
             <span>Amount entered</span>
             <span class="amount" id="co-amount-remitted">$0.00</span>
@@ -390,30 +391,73 @@
           <div id="co-payment-mismatch" class="alert alert-needs hidden">
             Amount entered does not match total due. Please resolve before confirming.
           </div>
- 
+
           <div class="form-actions mt-16">
             <button id="btn-confirm-checkout" class="btn btn-primary">Confirm checkout</button>
           </div>
           <div id="checkout-payment-error" class="form-error hidden"></div>
         </div>
- 
-        <!-- Step 3: Quilt delivery scan -->
-        <div id="checkout-step-3" class="hidden">
-          <div class="card">
-            <h3 class="page-heading" style="font-size:var(--fs-xl)">Scan quilts to confirm delivery</h3>
-            <div id="co-delivery-list" class="mb-16"></div>
-            <div class="form-actions">
-              <button id="btn-delivery-scan" class="btn btn-accent">Scan quilt QR</button>
-            </div>
-            <div id="delivery-scan-wrap" class="hidden mt-16">
-              <div class="qr-scanner-wrap">
-                <video id="delivery-video" autoplay playsinline muted></video>
-                <div class="qr-scanner-overlay"><div class="qr-scanner-frame"></div></div>
-              </div>
-              <button id="btn-delivery-scan-stop" class="btn btn-secondary mt-8">Stop scanner</button>
-            </div>
-            <div id="delivery-scan-feedback" class="form-success hidden"></div>
+
+        <!-- Checkout confirmed -->
+        <div id="checkout-confirmed-wrap" class="card hidden">
+          <div class="form-success mb-8" style="font-size:var(--fs-lg)">✓ Checkout confirmed for <span id="co-confirmed-bidder"></span></div>
+          <p class="text-muted mb-16">Send the bidder to the Delivery station to pick up their quilts.</p>
+          <button id="btn-checkout-new" class="btn btn-primary">Start next checkout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Delivery ──────────────────────────────────────────── -->
+    <div id="screen-delivery" class="screen">
+      <h2 class="page-heading">Delivery</h2>
+
+      <!-- Step 1: Identify bidder -->
+      <div id="delivery-step-1">
+        <div class="card">
+          <div class="form-group mb-16">
+            <label for="delivery-bidder-num">Bidder number</label>
+            <input type="number" id="delivery-bidder-num" min="1" placeholder="Enter manually or scan QR">
           </div>
+          <div class="form-actions">
+            <button id="btn-delivery-lookup" class="btn btn-primary">Look up bidder</button>
+            <button id="btn-delivery-scan-bidder" class="btn btn-accent">Scan QR code</button>
+          </div>
+          <div id="delivery-bidder-scan-wrap" class="hidden mt-16">
+            <div class="qr-scanner-wrap">
+              <video id="delivery-bidder-video" autoplay playsinline muted></video>
+              <div class="qr-scanner-overlay"><div class="qr-scanner-frame"></div></div>
+            </div>
+            <button id="btn-delivery-bidder-scan-stop" class="btn btn-secondary mt-8">Stop scanner</button>
+          </div>
+        </div>
+        <div id="delivery-lookup-error" class="form-error hidden"></div>
+      </div>
+
+      <!-- Step 2: Quilt delivery scan -->
+      <div id="delivery-step-2" class="hidden">
+        <button id="btn-delivery-back" class="btn btn-back mb-16">
+          <span class="back-arrow" aria-hidden="true">‹</span> Back to bidder lookup
+        </button>
+        <div class="card mb-16">
+          <div class="card-meta">Bidder</div>
+          <div class="card-title" id="dv-bidder-name"></div>
+          <div class="text-muted" id="dv-bidder-num"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="page-heading" style="font-size:var(--fs-xl)">Scan quilts to confirm delivery</h3>
+          <div id="dv-delivery-list" class="mb-16"></div>
+          <div class="form-actions">
+            <button id="btn-delivery-scan-quilt" class="btn btn-accent">Scan quilt QR</button>
+          </div>
+          <div id="delivery-quilt-scan-wrap" class="hidden mt-16">
+            <div class="qr-scanner-wrap">
+              <video id="delivery-quilt-video" autoplay playsinline muted></video>
+              <div class="qr-scanner-overlay"><div class="qr-scanner-frame"></div></div>
+            </div>
+            <button id="btn-delivery-quilt-scan-stop" class="btn btn-secondary mt-8">Stop scanner</button>
+          </div>
+          <div id="dv-scan-feedback" class="form-success hidden"></div>
         </div>
       </div>
     </div>
@@ -715,6 +759,7 @@
   <script src="js/cards.js"></script>
   <script src="js/bids.js"></script>
   <script src="js/checkout.js"></script>
+  <script src="js/delivery.js"></script>
   <script src="js/reports.js"></script>
   <script src="js/reset.js"></script>
 </body>

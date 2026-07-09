@@ -150,6 +150,7 @@ const ROLE_LABELS = [
   ['documentarian1', 'Documentarian 1'],
   ['documentarian2', 'Documentarian 2'],
   ['checkout',       'Checkout'],
+  ['delivery',       'Delivery'],
 ];
  
 async function loadPendingRequests() {

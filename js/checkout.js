@@ -16,7 +16,7 @@ function resetCheckout() {
   setError($('checkout-lookup-error'), '');
   hide($('checkout-scan-wrap'));
   hide($('checkout-step-2'));
-  hide($('checkout-step-3'));
+  hide($('checkout-confirmed-wrap'));
   show($('checkout-step-1'));
 }
  
@@ -118,9 +118,11 @@ async function lookupBidderForCheckout(bidderNumber) {
  
 function renderCheckoutStep2() {
   hide($('checkout-step-1'));
-  hide($('checkout-step-3'));
+  hide($('checkout-confirmed-wrap'));
+  show($('co-quilts-card'));
+  show($('co-payment-card'));
   show($('checkout-step-2'));
- 
+
   $('co-bidder-name').textContent = checkoutBidder.name;
   $('co-bidder-num').textContent  = `Bidder #${checkoutBidder.bidder_number}`;
  
@@ -290,97 +292,11 @@ $('btn-confirm-checkout').addEventListener('click', async () => {
  
   $('btn-confirm-checkout').disabled = false;
   $('btn-confirm-checkout').textContent = 'Confirm checkout';
- 
-  renderDeliveryStep(recId);
+
+  $('co-confirmed-bidder').textContent = `${checkoutBidder.name} (Bidder #${checkoutBidder.bidder_number})`;
+  hide($('co-quilts-card'));
+  hide($('co-payment-card'));
+  show($('checkout-confirmed-wrap'));
 });
- 
-// ── Step 3: Quilt delivery ────────────────────────────────────
- 
-async function renderDeliveryStep(checkoutRecordId) {
-  hide($('checkout-step-1'));
-  show($('checkout-step-2'));
-  show($('checkout-step-3'));
- 
-  await refreshDeliveryList(checkoutRecordId);
-}
- 
-async function refreshDeliveryList(checkoutRecordId) {
-  const { data: deliveries } = await sb.from('quilt_deliveries')
-    .select('*, quilts(quilt_number, name)')
-    .eq('checkout_record_id', checkoutRecordId);
- 
-  const wrap = $('co-delivery-list');
-  if (!deliveries || deliveries.length === 0) {
-    wrap.innerHTML = '<div class="text-muted">No quilts to deliver.</div>';
-    return;
-  }
- 
-  wrap.innerHTML = deliveries.map(d => `
-    <div class="flex-center gap-8" style="padding:8px 0;border-bottom:1px solid var(--rule)">
-      <div>
-        <div class="card-meta">Quilt #${d.quilts.quilt_number}</div>
-        <div class="fw-bold">${esc(d.quilts.name)}</div>
-      </div>
-      <div style="margin-left:auto">
-        ${d.delivered
-          ? '<span class="badge badge-ready">Delivered</span>'
-          : '<span class="badge badge-muted">Pending</span>'}
-      </div>
-    </div>`).join('');
-}
- 
-// Delivery QR scan
-$('btn-delivery-scan').addEventListener('click', async () => {
-  show($('delivery-scan-wrap'));
-  hide($('delivery-scan-feedback'));
-  const started = await startScanner('delivery-video', async value => {
-    stopScanner('delivery-video');
-    hide($('delivery-scan-wrap'));
-    await markQuiltDelivered(value);
-  });
-  if (!started) hide($('delivery-scan-wrap'));
-});
- 
-$('btn-delivery-scan-stop').addEventListener('click', () => {
-  stopScanner('delivery-video');
-  hide($('delivery-scan-wrap'));
-});
- 
-async function markQuiltDelivered(rawValue) {
-  const quiltNumber = parseInt(rawValue);
-  if (isNaN(quiltNumber)) {
-    $('delivery-scan-feedback').textContent = `Unrecognized QR code: "${rawValue}"`;
-    $('delivery-scan-feedback').className = 'form-error';
-    show($('delivery-scan-feedback'));
-    return;
-  }
- 
-  // Find the quilt
-  const { data: quilt } = await sb.from('quilts')
-    .select('id, quilt_number, name').eq('quilt_number', quiltNumber).maybeSingle();
- 
-  if (!quilt) {
-    $('delivery-scan-feedback').textContent = `Quilt #${quiltNumber} not found.`;
-    $('delivery-scan-feedback').className = 'form-error';
-    show($('delivery-scan-feedback'));
-    return;
-  }
- 
-  // Update delivery record
-  const { error } = await sb.from('quilt_deliveries').update({
-    delivered:    true,
-    delivered_at: new Date().toISOString(),
-  }).eq('checkout_record_id', checkoutRecord.id)
-    .eq('quilt_id', quilt.id);
- 
-  if (error) {
-    $('delivery-scan-feedback').textContent = `Error marking delivered: ${error.message}`;
-    $('delivery-scan-feedback').className = 'form-error';
-  } else {
-    $('delivery-scan-feedback').textContent = `✓ Quilt #${quiltNumber} "${quilt.name}" marked as delivered.`;
-    $('delivery-scan-feedback').className = 'form-success';
-  }
-  show($('delivery-scan-feedback'));
- 
-  await refreshDeliveryList(checkoutRecord.id);
-}
+
+$('btn-checkout-new').addEventListener('click', resetCheckout);
