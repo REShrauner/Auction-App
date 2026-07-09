@@ -155,8 +155,17 @@ $('btn-bid-modify').addEventListener('click', async () => {
   );
   if (!ok) return;
 
-  // Clear finalized/mismatch state, keep quilt association
-  await sb.from('bid_records').update({
+  $('btn-bid-modify').disabled = true;
+
+  // Clear finalized/mismatch state, keep quilt association.
+  // .select() is required here — without it, Supabase reports success
+  // (no error) even when zero rows were actually updated (e.g. a stale
+  // record id, a dropped connection, or an RLS check that silently
+  // filtered the row out). That was letting "reset" bids keep their old
+  // finalized values in the database — invisible on this screen because
+  // the UI cleared itself locally regardless, but still showing up in
+  // the Reports screen since the row was never actually touched.
+  const { data: updated, error } = await sb.from('bid_records').update({
     user_a_bid:            null,
     user_a_bidder_number:  null,
     user_a_submitted_at:   null,
@@ -168,7 +177,24 @@ $('btn-bid-modify').addEventListener('click', async () => {
     resolved_bid:          null,
     resolved_bidder_number: null,
     resolved_bidder_id:    null,
-  }).eq('id', currentBidRecord.id);
+  }).eq('id', currentBidRecord.id).select();
+
+  $('btn-bid-modify').disabled = false;
+
+  if (error || !updated || updated.length === 0) {
+    // Re-pull from the database so the panel reflects what's actually
+    // saved, instead of trusting the failed local reset. Note this also
+    // re-renders (and clears) the status banner, so the error message
+    // below must be set *after* these calls, not before.
+    await loadBidRecord(selectedBidQuiltId);
+    await loadBidQuiltList();
+    highlightBidRow();
+    $('bid-status-banner').innerHTML = `
+      <div class="alert alert-needs" style="margin-top:8px">
+        Could not reset this bid${error ? ': ' + esc(error.message) : ''} — please try again.
+      </div>`;
+    return;
+  }
 
   clearAllFields();
   clearFieldColors();
